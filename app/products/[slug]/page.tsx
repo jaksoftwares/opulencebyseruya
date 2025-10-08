@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ProductCard from '@/components/ProductCard';
 
 interface Product {
   id: string;
@@ -45,6 +46,7 @@ export default function ProductDetailPage() {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -74,6 +76,17 @@ export default function ProductDetailPage() {
             .maybeSingle();
 
           if (categoryData) setCategory(categoryData);
+
+          // Fetch related products from the same category
+          const { data: relatedData } = await supabase
+            .from('products')
+            .select('*')
+            .eq('category_id', productData.category_id)
+            .neq('id', productData.id)
+            .eq('is_active', true)
+            .limit(4);
+
+          if (relatedData) setRelatedProducts(relatedData);
         }
       }
 
@@ -617,6 +630,32 @@ export default function ProductDetailPage() {
               </TabsContent>
             </Tabs>
           </div>
+
+          {/* Related Products Section */}
+          {relatedProducts.length > 0 && (
+            <div className="mt-16">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">Related Products</h2>
+                <p className="text-gray-600">You might also like these products from the same category</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {relatedProducts.map((relatedProduct) => (
+                  <ProductCard
+                    key={relatedProduct.id}
+                    id={relatedProduct.id}
+                    name={relatedProduct.name}
+                    slug={relatedProduct.slug}
+                    price={relatedProduct.price}
+                    compareAtPrice={relatedProduct.compare_at_price || undefined}
+                    image={relatedProduct.images[0] || ''}
+                    isInStock={relatedProduct.stock_quantity > 0}
+                    isFeatured={relatedProduct.is_featured}
+                    sku={relatedProduct.sku}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
       <Footer />

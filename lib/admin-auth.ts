@@ -10,19 +10,19 @@ export const signInAdmin = async (email: string, password: string) => {
 
   if (error) throw error;
 
-  const { data: adminData } = await supabase
-    .from('admin_users')
+  const { data: customerData } = await supabase
+    .from('customers')
     .select('*')
     .eq('id', data.user.id)
     .eq('is_active', true)
     .maybeSingle();
 
-  if (!adminData) {
+  if (!customerData || (customerData.role !== 'admin' && customerData.role !== 'super_admin')) {
     await supabase.auth.signOut();
     throw new Error('Unauthorized: Not an admin user');
   }
 
-  return { user: data.user, admin: adminData };
+  return { user: data.user, customer: customerData };
 };
 
 export const signOutAdmin = async () => {
@@ -35,14 +35,14 @@ export const getCurrentAdmin = async () => {
 
   if (!user) return null;
 
-  const { data: adminData } = await supabase
-    .from('admin_users')
+  const { data: customerData } = await supabase
+    .from('customers')
     .select('*')
     .eq('id', user.id)
     .eq('is_active', true)
     .maybeSingle();
 
-  if (!adminData) return null;
+  if (!customerData || (customerData.role !== 'admin' && customerData.role !== 'super_admin')) return null;
 
-  return { user, admin: adminData };
+  return { user, customer: customerData };
 };

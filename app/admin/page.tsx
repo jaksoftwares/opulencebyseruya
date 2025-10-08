@@ -1,106 +1,147 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { signInAdmin } from '@/lib/admin-auth';
-import { useToast } from '@/hooks/use-toast';
-import { LogIn } from 'lucide-react';
-import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  BarChart3,
+  Package,
+  Users,
+  ShoppingCart,
+  Settings,
+  FileText,
+  TrendingUp,
+  AlertCircle
+} from 'lucide-react';
 
-export default function AdminLoginPage() {
+export default function AdminDashboard() {
+  const { isAdmin, loading } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      await signInAdmin(email, password);
-      toast({
-        title: 'Welcome back!',
-        description: 'Logged in successfully',
-      });
-      router.push('/admin/dashboard');
-    } catch (error: any) {
-      toast({
-        title: 'Login failed',
-        description: error.message || 'Invalid credentials',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      router.push('/login');
     }
-  };
+  }, [isAdmin, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-amber-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+            <CardTitle>Access Denied</CardTitle>
+            <p className="text-gray-600">You don&apos;t have permission to access this page.</p>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link href="/">Go Home</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const adminLinks = [
+    {
+      href: '/admin/dashboard',
+      label: 'Dashboard',
+      icon: BarChart3,
+      description: 'Overview and analytics'
+    },
+    {
+      href: '/admin/products',
+      label: 'Products',
+      icon: Package,
+      description: 'Manage products and inventory'
+    },
+    {
+      href: '/admin/orders',
+      label: 'Orders',
+      icon: ShoppingCart,
+      description: 'View and manage orders'
+    },
+    {
+      href: '/admin/customers',
+      label: 'Customers',
+      icon: Users,
+      description: 'Customer management'
+    },
+    {
+      href: '/admin/categories',
+      label: 'Categories',
+      icon: FileText,
+      description: 'Manage product categories'
+    },
+    {
+      href: '/admin/analytics',
+      label: 'Analytics',
+      icon: TrendingUp,
+      description: 'Sales and performance data'
+    },
+    {
+      href: '/admin/settings',
+      label: 'Settings',
+      icon: Settings,
+      description: 'System configuration'
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-gray-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-4 text-center">
-          <div className="flex justify-center">
-            <Image
-              src="/opulence.jpg"
-              alt="Opulence by Seruya"
-              width={200}
-              height={80}
-              className="h-16 w-auto"
-            />
-          </div>
-          <CardTitle className="text-2xl font-serif">Admin Login</CardTitle>
-          <p className="text-sm text-gray-600">
-            Enter your credentials to access the admin panel
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
             <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="admin@opulence.com"
-              />
+              <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
+              <p className="mt-1 text-sm text-gray-600">Manage your e-commerce platform</p>
             </div>
-
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full bg-amber-600 hover:bg-amber-700"
-              disabled={loading}
-            >
-              {loading ? (
-                'Logging in...'
-              ) : (
-                <>
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Login
-                </>
-              )}
+            <Button asChild variant="outline">
+              <Link href="/">← Back to Store</Link>
             </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {adminLinks.map((link) => (
+            <Card key={link.href} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <link.icon className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">{link.label}</CardTitle>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 mb-4">{link.description}</p>
+                <Button asChild className="w-full">
+                  <Link href={link.href}>Access {link.label}</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

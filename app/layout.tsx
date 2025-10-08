@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Playfair_Display, Inter } from 'next/font/google';
 import { CartProvider } from '@/contexts/CartContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 
 const playfair = Playfair_Display({
@@ -30,10 +31,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
       <body className={inter.className}>
-        <CartProvider>
-          {children}
-          <Toaster />
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            {children}
+            <Toaster />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );
