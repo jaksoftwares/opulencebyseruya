@@ -27,7 +27,7 @@ interface SystemSettings {
 
 export default function AdminSettingsPage() {
   const router = useRouter();
-  const { isAdmin, customer } = useAuth();
+  const { isAdmin, customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,7 +43,7 @@ export default function AdminSettingsPage() {
   });
 
   useEffect(() => {
-    if (!loading) {
+    if (!authLoading) {
       if (!isAdmin) {
         router.push('/login');
         return;
@@ -51,7 +51,7 @@ export default function AdminSettingsPage() {
         fetchSettings();
       }
     }
-  }, [isAdmin, loading, customer, router]);
+  }, [isAdmin, authLoading, customer, router]);
 
   const fetchSettings = async () => {
     try {
@@ -103,7 +103,7 @@ export default function AdminSettingsPage() {
     setSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AdminNav />

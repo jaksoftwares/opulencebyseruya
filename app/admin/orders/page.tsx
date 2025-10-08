@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Eye, Phone } from 'lucide-react';
-import { getCurrentAdmin } from '@/lib/admin-auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -37,6 +37,7 @@ interface OrderItem {
 
 export default function AdminOrdersPage() {
   const router = useRouter();
+  const { isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -45,18 +46,15 @@ export default function AdminOrdersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
-      const admin = await getCurrentAdmin();
-      if (!admin) {
-        router.push('/admin');
+    if (!authLoading) {
+      if (!isAdmin) {
+        router.push('/login');
         return;
+      } else {
+        fetchOrders();
       }
-
-      await fetchOrders();
-    };
-
-    init();
-  }, [router]);
+    }
+  }, [isAdmin, authLoading, router]);
 
   const fetchOrders = async () => {
     const { data } = await supabase
@@ -121,7 +119,7 @@ export default function AdminOrdersPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AdminNav />

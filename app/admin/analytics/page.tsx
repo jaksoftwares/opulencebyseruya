@@ -31,7 +31,7 @@ interface AnalyticsData {
 
 export default function AdminAnalyticsPage() {
   const router = useRouter();
-  const { isAdmin, customer } = useAuth();
+  const { isAdmin, customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData>({
@@ -45,7 +45,7 @@ export default function AdminAnalyticsPage() {
   });
 
   useEffect(() => {
-    if (!loading) {
+    if (!authLoading) {
       if (!isAdmin) {
         router.push('/login');
         return;
@@ -53,7 +53,7 @@ export default function AdminAnalyticsPage() {
         fetchAnalytics();
       }
     }
-  }, [isAdmin, loading, customer, router]);
+  }, [isAdmin, authLoading, customer, router]);
 
   const fetchAnalytics = async () => {
     try {
@@ -142,7 +142,7 @@ export default function AdminAnalyticsPage() {
       .map(([name, sales]) => ({ name, sales }));
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AdminNav />

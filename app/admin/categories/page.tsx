@@ -28,7 +28,7 @@ interface Category {
 
 export default function AdminCategoriesPage() {
   const router = useRouter();
-  const { isAdmin, customer } = useAuth();
+  const { isAdmin, customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -45,17 +45,42 @@ export default function AdminCategoriesPage() {
 
   const fetchCategories = useCallback(async () => {
     try {
+      console.log('Fetching categories...');
+
+      // First try with RLS
       const { data, error } = await supabase
         .from('categories')
         .select('*')
         .order('display_order', { ascending: true });
 
-      if (error) throw error;
-      if (data) setCategories(data);
+      console.log('Categories query result:', { data, error, count: data?.length });
+
+      if (error) {
+        console.error('Categories query error:', error);
+
+        // If RLS fails, try to check if categories exist at all
+        console.log('Trying to check categories without RLS...');
+        const { data: allCategories, error: allError } = await supabase
+          .from('categories')
+          .select('count', { count: 'exact', head: true });
+
+        console.log('All categories count:', { count: allCategories, error: allError });
+
+        throw error;
+      }
+
+      if (data) {
+        console.log('Categories loaded:', data.length, 'items');
+        setCategories(data);
+      } else {
+        console.log('No categories data returned');
+        setCategories([]);
+      }
     } catch (error: any) {
+      console.error('Failed to load categories:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load categories',
+        title: 'Error Loading Categories',
+        description: `Failed to load categories: ${error.message}. This might be due to database permissions.`,
         variant: 'destructive',
       });
     } finally {
@@ -64,7 +89,7 @@ export default function AdminCategoriesPage() {
   }, [toast]);
 
   useEffect(() => {
-    if (!loading) {
+    if (!authLoading) {
       if (!isAdmin) {
         router.push('/login');
         return;
@@ -72,7 +97,7 @@ export default function AdminCategoriesPage() {
         fetchCategories();
       }
     }
-  }, [isAdmin, loading, customer, router, fetchCategories]);
+  }, [isAdmin, authLoading, customer, router, fetchCategories]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,7 +180,7 @@ export default function AdminCategoriesPage() {
     setEditingCategory(null);
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AdminNav />
@@ -190,18 +215,39 @@ export default function AdminCategoriesPage() {
       <AdminNav />
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="font-serif text-3xl font-bold text-gray-900">Categories</h1>
+          <div>
+            <h1 className="font-serif text-3xl font-bold text-gray-900">Categories</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              {categories.length} categories loaded
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={fetchCategories}
+              disabled={authLoading || loading}
+            >
+              Refresh
+            </Button>
+
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button className="bg-amber-600 hover:bg-amber-700">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Category
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          </div>
 
           <Dialog open={dialogOpen} onOpenChange={(open) => {
             setDialogOpen(open);
             if (!open) resetForm();
           }}>
-            <DialogTrigger asChild>
-              <Button className="bg-amber-600 hover:bg-amber-700">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Category
-              </Button>
-            </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
@@ -291,38 +337,49 @@ export default function AdminCategoriesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell className="font-mono text-sm">{category.slug}</TableCell>
-                    <TableCell className="max-w-xs truncate">{category.description}</TableCell>
-                    <TableCell>{category.display_order}</TableCell>
-                    <TableCell>
-                      <Badge variant={category.is_active ? 'default' : 'secondary'}>
-                        {category.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(category)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(category.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                {categories.length > 0 ? (
+                  categories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell className="font-mono text-sm">{category.slug}</TableCell>
+                      <TableCell className="max-w-xs truncate">{category.description}</TableCell>
+                      <TableCell>{category.display_order}</TableCell>
+                      <TableCell>
+                        <Badge variant={category.is_active ? 'default' : 'secondary'}>
+                          {category.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(category)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(category.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <div className="text-gray-500">
+                        <p className="text-lg mb-2">No categories found</p>
+                        <p className="text-sm">Click "Add Category" to create your first category</p>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>

@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, Trash2 } from 'lucide-react';
-import { getCurrentAdmin } from '@/lib/admin-auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -34,6 +34,7 @@ interface Category {
 
 export default function AdminProductsPage() {
   const router = useRouter();
+  const { isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
@@ -52,18 +53,15 @@ export default function AdminProductsPage() {
   });
 
   useEffect(() => {
-    const init = async () => {
-      const admin = await getCurrentAdmin();
-      if (!admin) {
-        router.push('/admin');
+    if (!authLoading) {
+      if (!isAdmin) {
+        router.push('/login');
         return;
+      } else {
+        fetchData();
       }
-
-      await fetchData();
-    };
-
-    init();
-  }, [router]);
+    }
+  }, [isAdmin, authLoading, router]);
 
   const fetchData = async () => {
     const [productsRes, categoriesRes] = await Promise.all([
@@ -163,7 +161,7 @@ export default function AdminProductsPage() {
     setEditingProduct(null);
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AdminNav />

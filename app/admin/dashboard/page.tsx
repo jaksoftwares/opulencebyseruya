@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminNav from '@/components/admin/AdminNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, ShoppingCart, DollarSign, TrendingUp } from 'lucide-react';
-import { getCurrentAdmin } from '@/lib/admin-auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
 interface Stats {
@@ -17,6 +17,7 @@ interface Stats {
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { isAdmin, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats>({
     totalProducts: 0,
@@ -26,36 +27,37 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const admin = await getCurrentAdmin();
-      if (!admin) {
-        router.push('/admin');
+    if (!authLoading) {
+      if (!isAdmin) {
+        router.push('/login');
         return;
+      } else {
+        fetchStats();
       }
+    }
+  }, [isAdmin, authLoading, router]);
 
-      const [productsRes, ordersRes, revenueRes, pendingRes] = await Promise.all([
-        supabase.from('products').select('id', { count: 'exact' }),
-        supabase.from('orders').select('id', { count: 'exact' }),
-        supabase.from('orders').select('total'),
-        supabase.from('orders').select('id', { count: 'exact' }).eq('status', 'pending'),
-      ]);
+  const fetchStats = async () => {
+    const [productsRes, ordersRes, revenueRes, pendingRes] = await Promise.all([
+      supabase.from('products').select('id', { count: 'exact' }),
+      supabase.from('orders').select('id', { count: 'exact' }),
+      supabase.from('orders').select('total'),
+      supabase.from('orders').select('id', { count: 'exact' }).eq('status', 'pending'),
+    ]);
 
-      const revenue = revenueRes.data?.reduce((sum: number, order: any) => sum + (order.total || 0), 0) || 0;
+    const revenue = revenueRes.data?.reduce((sum: number, order: any) => sum + (order.total || 0), 0) || 0;
 
-      setStats({
-        totalProducts: productsRes.count || 0,
-        totalOrders: ordersRes.count || 0,
-        totalRevenue: revenue,
-        pendingOrders: pendingRes.count || 0,
-      });
+    setStats({
+      totalProducts: productsRes.count || 0,
+      totalOrders: ordersRes.count || 0,
+      totalRevenue: revenue,
+      pendingOrders: pendingRes.count || 0,
+    });
 
-      setLoading(false);
-    };
+    setLoading(false);
+  };
 
-    checkAuth();
-  }, [router]);
-
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AdminNav />

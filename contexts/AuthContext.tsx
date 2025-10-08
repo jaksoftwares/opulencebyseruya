@@ -45,41 +45,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Normalize email for comparison
     const normalizedEmail = userEmail.toLowerCase().trim();
 
-    // Get all customers and find matching email (case insensitive)
-    const { data: allCustomers, error } = await supabase
+    // First check if user is an admin
+    let adminData = null;
+    try {
+      const result = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('id', userId)
+        .eq('is_active', true)
+        .maybeSingle();
+      adminData = result.data;
+    } catch (error) {
+      console.log('Admin table query failed in fetchCustomer');
+    }
+
+    // Also check for known admin emails
+    if (!adminData && normalizedEmail === 'admin@opulence.com') {
+      adminData = { role: 'admin', is_active: true };
+    }
+
+    // Get customer data
+    const { data: customerData, error } = await supabase
       .from('customers')
-      .select('*');
+      .select('*')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
 
     if (error) {
-      console.error('Error fetching customers:', error);
+      console.error('Error fetching customer:', error);
       return null;
     }
 
-    // Find customer with matching email (case insensitive)
-    const customerData = allCustomers?.find(
-      customer => customer.email?.toLowerCase().trim() === normalizedEmail
-    );
-
-    // If customer exists, check if they're an admin
     if (customerData) {
-      let adminData = null;
-      try {
-        const result = await supabase
-          .from('admin_users')
-          .select('*')
-          .eq('id', userId)
-          .eq('is_active', true)
-          .maybeSingle();
-        adminData = result.data;
-      } catch (error) {
-        console.log('Admin table query failed in fetchCustomer');
-      }
-
-      // Also check for known admin emails
-      if (!adminData && normalizedEmail === 'admin@opulence.com') {
-        adminData = { role: 'admin', is_active: true };
-      }
-
       // Return customer with role information
       return {
         ...customerData,
