@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Heart, ShoppingCart, Eye, Star, TrendingUp, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 interface Product {
   id: string;
@@ -14,115 +15,88 @@ interface Product {
   rating: number;
   reviews: number;
   badge?: 'new' | 'bestseller' | 'trending';
+  categoryId?: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 export default function FeaturedProducts() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
-
-  const categories = [
-    { id: 'all', name: 'All Products' },
-    { id: 'kitchen', name: 'Kitchen' },
-    { id: 'decor', name: 'Home Decor' },
-    { id: 'bathroom', name: 'Bathroom' },
-    { id: 'bedroom', name: 'Bedroom' },
-  ];
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock products data
-    const mockProducts: Product[] = [
-      {
-        id: '1',
-        name: 'Luxury Ceramic Dinner Set',
-        slug: 'luxury-ceramic-dinner-set',
-        price: 8999,
-        compareAtPrice: 12999,
-        image: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?q=80&w=800',
-        rating: 4.8,
-        reviews: 127,
-        badge: 'bestseller'
-      },
-      {
-        id: '2',
-        name: 'Premium Non-Stick Cookware',
-        slug: 'premium-non-stick-cookware',
-        price: 6499,
-        compareAtPrice: 9999,
-        image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=800',
-        rating: 4.9,
-        reviews: 203,
-        badge: 'trending'
-      },
-      {
-        id: '3',
-        name: 'Elegant Wall Mirror Set',
-        slug: 'elegant-wall-mirror-set',
-        price: 4999,
-        compareAtPrice: null,
-        image: 'https://images.unsplash.com/photo-1618220179428-22790b461013?q=80&w=800',
-        rating: 4.7,
-        reviews: 89,
-        badge: 'new'
-      },
-      {
-        id: '4',
-        name: 'Designer Storage Baskets',
-        slug: 'designer-storage-baskets',
-        price: 2999,
-        compareAtPrice: 4999,
-        image: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?q=80&w=800',
-        rating: 4.6,
-        reviews: 156,
-        badge: 'bestseller'
-      },
-      {
-        id: '5',
-        name: 'Luxury Bath Towel Set',
-        slug: 'luxury-bath-towel-set',
-        price: 3499,
-        compareAtPrice: 5999,
-        image: 'https://images.unsplash.com/photo-1631889993959-41b4e9c6e3c5?q=80&w=800',
-        rating: 4.9,
-        reviews: 312,
-        badge: 'trending'
-      },
-      {
-        id: '6',
-        name: 'Modern Table Lamp',
-        slug: 'modern-table-lamp',
-        price: 3999,
-        compareAtPrice: null,
-        image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?q=80&w=800',
-        rating: 4.5,
-        reviews: 67,
-        badge: 'new'
-      },
-      {
-        id: '7',
-        name: 'Bamboo Cutting Board Set',
-        slug: 'bamboo-cutting-board-set',
-        price: 2499,
-        compareAtPrice: 3999,
-        image: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?q=80&w=800',
-        rating: 4.8,
-        reviews: 189,
-        badge: 'bestseller'
-      },
-      {
-        id: '8',
-        name: 'Decorative Throw Pillows',
-        slug: 'decorative-throw-pillows',
-        price: 1999,
-        compareAtPrice: null,
-        image: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?q=80&w=800',
-        rating: 4.7,
-        reviews: 143,
-        badge: 'trending'
-      },
-    ];
-    setProducts(mockProducts);
+    const fetchData = async () => {
+      try {
+        // Fetch categories
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories')
+          .select('id, name, slug')
+          .eq('is_active', true)
+          .order('display_order');
+
+        if (categoriesError) {
+          console.error('Error fetching categories:', categoriesError);
+        } else if (categoriesData) {
+          const formattedCategories = [
+            { id: 'all', name: 'All Products', slug: 'all' },
+            ...categoriesData
+          ];
+          setCategories(formattedCategories);
+        }
+
+        // Fetch featured products
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_active', true)
+          .eq('is_featured', true)
+          .order('created_at', { ascending: false })
+          .limit(8);
+
+        if (productsError) {
+          console.error('Error fetching products:', productsError);
+        } else if (productsData) {
+          const formattedProducts: Product[] = productsData.map((product: any) => ({
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            price: product.price,
+            compareAtPrice: product.original_price || product.compare_at_price,
+            image: product.images && product.images.length > 0 ? product.images[0] : 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=800',
+            rating: 4.5 + Math.random() * 0.5, // Random rating between 4.5-5.0
+            reviews: Math.floor(Math.random() * 200) + 50, // Random reviews between 50-250
+            badge: Math.random() > 0.7 ? (Math.random() > 0.5 ? 'bestseller' : 'trending') : undefined,
+            categoryId: product.category_id
+          }));
+          setAllProducts(formattedProducts);
+          setProducts(formattedProducts);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
+
+  useEffect(() => {
+    if (selectedCategory === 'all') {
+      setProducts(allProducts);
+    } else {
+      const filtered = allProducts.filter(product => product.categoryId === selectedCategory);
+      setProducts(filtered);
+    }
+  }, [selectedCategory, allProducts]);
 
   const getBadgeConfig = (badge?: string) => {
     switch (badge) {
@@ -176,7 +150,24 @@ export default function FeaturedProducts() {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {products.map((product) => {
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="bg-white rounded-2xl overflow-hidden shadow-md animate-pulse">
+                <div className="h-64 bg-gray-200"></div>
+                <div className="p-5 space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                  <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </div>
+            ))
+          ) : products.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <p className="text-gray-600 text-lg">No featured products available.</p>
+            </div>
+          ) : (
+            products.map((product) => {
             const isHovered = hoveredProduct === product.id;
             const badgeConfig = getBadgeConfig(product.badge);
             const BadgeIcon = badgeConfig?.icon;
@@ -271,7 +262,8 @@ export default function FeaturedProducts() {
                 </div>
               </div>
             );
-          })}
+            })
+          )}
         </div>
 
         {/* View All Button */}
@@ -287,77 +279,3 @@ export default function FeaturedProducts() {
     </section>
   );
 }
-
-// 'use client';
-
-// import { useEffect, useState } from 'react';
-// import ProductCard from '@/components/ProductCard';
-// import { supabase } from '@/lib/supabase';
-
-// interface Product {
-//   id: string;
-//   name: string;
-//   slug: string;
-//   price: number;
-//   compare_at_price: number | null;
-//   images: string[];
-//   stock_quantity: number;
-//   sku: string;
-//   is_featured: boolean;
-// }
-
-// export default function FeaturedProducts() {
-//   const [products, setProducts] = useState<Product[]>([]);
-
-//   useEffect(() => {
-//     const fetchFeaturedProducts = async () => {
-//       const { data } = await supabase
-//         .from('products')
-//         .select('*')
-//         .eq('is_active', true)
-//         .eq('is_featured', true)
-//         .order('created_at', { ascending: false })
-//         .limit(8);
-
-//       if (data) {
-//         setProducts(data);
-//       }
-//     };
-
-//     fetchFeaturedProducts();
-//   }, []);
-
-//   if (products.length === 0) return null;
-
-//   return (
-//     <section className="py-16 bg-gray-50">
-//       <div className="container mx-auto px-4">
-//         <div className="text-center mb-12">
-//           <h2 className="font-serif text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-//             Featured Products
-//           </h2>
-//           <p className="text-gray-600 max-w-2xl mx-auto">
-//             Handpicked selections of our most popular and premium items
-//           </p>
-//         </div>
-
-//         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-//           {products.map((product) => (
-//             <ProductCard
-//               key={product.id}
-//               id={product.id}
-//               name={product.name}
-//               slug={product.slug}
-//               price={product.price}
-//               compareAtPrice={product.compare_at_price || undefined}
-//               image={product.images[0] || ''}
-//               isInStock={product.stock_quantity > 0}
-//               isFeatured={product.is_featured}
-//               sku={product.sku}
-//             />
-//           ))}
-//         </div>
-//       </div>
-//     </section>
-//   );
-// }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Flame, Clock, TrendingUp, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 interface Deal {
   id: string;
@@ -20,60 +21,47 @@ interface Deal {
 export default function TopDeals() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [timeRemaining, setTimeRemaining] = useState('23:45:12');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock deals data
-    const mockDeals: Deal[] = [
-      {
-        id: '1',
-        name: 'Premium Cookware Set',
-        slug: 'premium-cookware-set',
-        price: 8999,
-        originalPrice: 14999,
-        discount: 40,
-        image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=800',
-        timeLeft: '23:45:12',
-        soldCount: 47,
-        stockLeft: 13
-      },
-      {
-        id: '2',
-        name: 'Luxury Bath Towel Set',
-        slug: 'luxury-bath-towel-set',
-        price: 3499,
-        originalPrice: 5999,
-        discount: 42,
-        image: 'https://images.unsplash.com/photo-1631889993959-41b4e9c6e3c5?q=80&w=800',
-        timeLeft: '23:45:12',
-        soldCount: 89,
-        stockLeft: 21
-      },
-      {
-        id: '3',
-        name: 'Designer Storage Baskets',
-        slug: 'designer-storage-baskets',
-        price: 2499,
-        originalPrice: 4499,
-        discount: 44,
-        image: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?q=80&w=800',
-        timeLeft: '23:45:12',
-        soldCount: 124,
-        stockLeft: 6
-      },
-      {
-        id: '4',
-        name: 'Ceramic Dinner Set',
-        slug: 'ceramic-dinner-set',
-        price: 6999,
-        originalPrice: 11999,
-        discount: 42,
-        image: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?q=80&w=800',
-        timeLeft: '23:45:12',
-        soldCount: 63,
-        stockLeft: 18
+    const fetchTopDeals = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_active', true)
+          .eq('tag', 'top-deals')
+          .order('created_at', { ascending: false })
+          .limit(4);
+
+        if (error) {
+          console.error('Error fetching top deals:', error);
+          return;
+        }
+
+        if (data) {
+          const formattedDeals: Deal[] = data.map((product: any) => ({
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            price: product.price,
+            originalPrice: product.original_price || product.compare_at_price || product.price,
+            discount: product.discount || (product.original_price ? Math.round(((product.original_price - product.price) / product.original_price) * 100) : 0),
+            image: product.images && product.images.length > 0 ? product.images[0] : 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=800',
+            timeLeft: '23:45:12',
+            soldCount: product.sold_count || 0,
+            stockLeft: product.stock_left || product.stock_quantity || 0
+          }));
+          setDeals(formattedDeals);
+        }
+      } catch (error) {
+        console.error('Error fetching top deals:', error);
+      } finally {
+        setLoading(false);
       }
-    ];
-    setDeals(mockDeals);
+    };
+
+    fetchTopDeals();
 
     // Countdown timer
     const timer = setInterval(() => {
@@ -129,7 +117,25 @@ export default function TopDeals() {
 
         {/* Deals Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {deals.map((deal) => (
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="bg-white rounded-2xl overflow-hidden shadow-lg animate-pulse">
+                <div className="h-56 bg-gray-200"></div>
+                <div className="p-5 space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-2 bg-gray-200 rounded"></div>
+                  <div className="h-10 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+            ))
+          ) : deals.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <p className="text-gray-600 text-lg">No deals available at the moment.</p>
+            </div>
+          ) : (
+            deals.map((deal) => (
             <Link key={deal.id} href={`/products/${deal.slug}`}>
               <div className="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
                 {/* Image Container */}
@@ -192,7 +198,8 @@ export default function TopDeals() {
                 </div>
               </div>
             </Link>
-          ))}
+            ))
+          )}
         </div>
 
         {/* View All Deals Button */}
