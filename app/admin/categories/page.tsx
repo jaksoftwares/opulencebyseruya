@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminNav from '@/components/admin/AdminNav';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ interface Category {
 
 export default function AdminCategoriesPage() {
   const router = useRouter();
-  const { isAdmin } = useAuth();
+  const { isAdmin, customer } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -43,18 +43,7 @@ export default function AdminCategoriesPage() {
     is_active: true,
   });
 
-  useEffect(() => {
-    if (!loading) {
-      if (!isAdmin) {
-        router.push('/login');
-        return;
-      } else {
-        fetchCategories();
-      }
-    }
-  }, [isAdmin, loading, customer, router]);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('categories')
@@ -72,7 +61,18 @@ export default function AdminCategoriesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (!loading) {
+      if (!isAdmin) {
+        router.push('/login');
+        return;
+      } else {
+        fetchCategories();
+      }
+    }
+  }, [isAdmin, loading, customer, router, fetchCategories]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,7 +173,7 @@ export default function AdminCategoriesPage() {
           <CardHeader className="text-center">
             <div className="text-6xl mb-4">🔒</div>
             <CardTitle>Access Denied</CardTitle>
-            <p className="text-gray-600">You don't have permission to access this page.</p>
+            <p className="text-gray-600">You don&apos;t have permission to access this page.</p>
           </CardHeader>
           <CardContent>
             <Button asChild className="w-full">

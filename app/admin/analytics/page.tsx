@@ -160,7 +160,7 @@ export default function AdminAnalyticsPage() {
           <CardHeader className="text-center">
             <div className="text-6xl mb-4">🔒</div>
             <CardTitle>Access Denied</CardTitle>
-            <p className="text-gray-600">You don't have permission to access this page.</p>
+            <p className="text-gray-600">You don&apos;t have permission to access this page.</p>
           </CardHeader>
           <CardContent>
             <Button asChild className="w-full">
