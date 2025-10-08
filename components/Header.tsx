@@ -17,6 +17,7 @@ export default function Header() {
     { href: '/shop', label: 'Shop' },
     { href: '/categories', label: 'Categories' },
     { href: '/about', label: 'About' },
+    { href: '/blogs', label: 'Blogs' },
     { href: '/contact', label: 'Contact' },
   ];
 
