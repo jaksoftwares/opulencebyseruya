@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/lib/supabase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronRight } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -104,6 +106,20 @@ export default function CategoryPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
+
+      {/* Breadcrumb */}
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-4 py-4">
+          <nav className="flex items-center space-x-2 text-sm text-gray-600">
+            <Link href="/" className="hover:text-amber-600 transition-colors">Home</Link>
+            <ChevronRight className="h-4 w-4" />
+            <Link href="/shop" className="hover:text-amber-600 transition-colors">Shop</Link>
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-gray-900 font-medium">{category.name}</span>
+          </nav>
+        </div>
+      </div>
+
       <main className="flex-1">
         <div className="bg-gradient-to-br from-amber-50 to-white py-12">
           <div className="container mx-auto px-4">
