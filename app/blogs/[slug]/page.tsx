@@ -109,11 +109,11 @@ export default function BlogPostPage() {
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
   const shareTitle = blogPost.title;
 
-  const handleShare = (platform) => {
+  const handleShare = (platform: 'facebook' | 'twitter' | 'email' | 'copy') => {
     const encodedUrl = encodeURIComponent(shareUrl);
     const encodedTitle = encodeURIComponent(shareTitle);
     
-    const urls = {
+    const urls: Record<'facebook' | 'twitter' | 'email', string> = {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
       twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
       email: `mailto:?subject=${encodedTitle}&body=Check out this article: ${encodedUrl}`
