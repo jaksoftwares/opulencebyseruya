@@ -56,6 +56,14 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors"
+              >
+                Admin
+              </Link>
+            )}
           </nav>
 
           <div className="flex items-center space-x-4">

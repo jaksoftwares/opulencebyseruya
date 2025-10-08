@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Package, ShoppingCart, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Users, FileText, TrendingUp, Settings, LogOut, Menu, X } from 'lucide-react';
 import { signOutAdmin } from '@/lib/admin-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
@@ -14,6 +14,10 @@ const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
+  { href: '/admin/customers', label: 'Customers', icon: Users },
+  { href: '/admin/categories', label: 'Categories', icon: FileText },
+  { href: '/admin/analytics', label: 'Analytics', icon: TrendingUp },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AdminNav() {

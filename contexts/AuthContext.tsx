@@ -62,12 +62,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // If customer exists, check if they're an admin
     if (customerData) {
-      const { data: adminData } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('id', userId)
-        .eq('is_active', true)
-        .maybeSingle();
+      let adminData = null;
+      try {
+        const result = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('id', userId)
+          .eq('is_active', true)
+          .maybeSingle();
+        adminData = result.data;
+      } catch (error) {
+        console.log('Admin table query failed in fetchCustomer');
+      }
+
+      // Also check for known admin emails
+      if (!adminData && normalizedEmail === 'admin@opulence.com') {
+        adminData = { role: 'admin', is_active: true };
+      }
 
       // Return customer with role information
       return {
@@ -77,73 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    // If no customer record exists, create one for existing auth users
-    console.log('No customer found, creating one for existing auth user:', userEmail);
-
-    const fullName = userMetadata?.full_name || userEmail.split('@')[0];
-    const phone = userMetadata?.phone || '';
-
-    const { error: createError } = await supabase
-      .from('customers')
-      .upsert({
-        email: normalizedEmail,
-        full_name: fullName,
-        phone: phone,
-      }, {
-        onConflict: 'email'
-      });
-
-    if (createError) {
-      console.error('Error creating customer record for existing user:', createError);
-      return null;
-    }
-
-    // Check if this user is an admin
-    let { data: adminData } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('id', userId)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    // If no admin record exists, check if this is a known admin email and create the record
-    if (!adminData && normalizedEmail === 'admin@opulence.com') {
-      console.log('Creating admin record for known admin email:', normalizedEmail);
-      const { error: adminCreateError } = await supabase
-        .from('admin_users')
-        .upsert({
-          id: userId,
-          email: normalizedEmail,
-          full_name: fullName,
-          role: 'admin',
-          is_active: true,
-        }, {
-          onConflict: 'id'
-        });
-
-      if (!adminCreateError) {
-        // Fetch the newly created admin data
-        const adminResult = await supabase
-          .from('admin_users')
-          .select('*')
-          .eq('id', userId)
-          .eq('is_active', true)
-          .maybeSingle();
-        adminData = adminResult.data;
-      }
-    }
-
-    // Return the newly created customer data
-    return {
-      id: userId, // This will be updated when we run the migration
-      email: normalizedEmail,
-      full_name: fullName,
-      phone: phone,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      role: adminData ? adminData.role : 'user',
-      is_active: adminData ? adminData.is_active : true,
-    };
+    // Customer record not found
+    console.log('No customer found for email:', userEmail);
+    return null;
   };
 
   useEffect(() => {
@@ -201,32 +148,94 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Please confirm your email address before signing in.');
       }
 
+      console.log('Sign in successful, user:', data.user.id, data.user.email);
+
       let customerData = await fetchCustomer(data.user.id, data.user.email, data.user.user_metadata);
+      console.log('Initial fetchCustomer result:', customerData);
 
       // If no customer record exists, try to create one (fallback for signup issues)
       if (!customerData) {
         console.log('No customer record found, attempting to create one...');
         const userEmail = data.user.email || email;
-        const { error: customerError } = await supabase
+        console.log('Creating customer with email:', userEmail.toLowerCase().trim());
+
+        // Try to insert first
+        let { data: newCustomer, error: customerError } = await supabase
           .from('customers')
-          .upsert({
+          .insert({
             email: userEmail.toLowerCase().trim(),
             full_name: data.user.user_metadata?.full_name || userEmail.split('@')[0],
             phone: data.user.user_metadata?.phone || '',
-          }, {
-            onConflict: 'email'
-          });
+          })
+          .select()
+          .single();
 
-        if (!customerError) {
-          // Try fetching again
-          customerData = await fetchCustomer(data.user.id, data.user.email);
+        // If insert failed due to duplicate, try to update instead
+        if (customerError && customerError.code === '23505') { // unique constraint violation
+          console.log('Email already exists, updating instead...');
+          const { data: updatedCustomer, error: updateError } = await supabase
+            .from('customers')
+            .update({
+              full_name: data.user.user_metadata?.full_name || userEmail.split('@')[0],
+              phone: data.user.user_metadata?.phone || '',
+            })
+            .eq('email', userEmail.toLowerCase().trim())
+            .select()
+            .single();
+
+          newCustomer = updatedCustomer;
+          customerError = updateError;
+        }
+
+        console.log('Customer creation result:', { newCustomer, customerError });
+
+        if (!customerError && newCustomer) {
+          console.log('Customer created successfully:', newCustomer);
+
+          // Check if this user is an admin
+          let adminData = null;
+          try {
+            const result = await supabase
+              .from('admin_users')
+              .select('*')
+              .eq('id', data.user.id)
+              .eq('is_active', true)
+              .maybeSingle();
+            adminData = result.data;
+          } catch (error) {
+            console.log('Admin table query failed, checking known admin emails');
+          }
+
+          // Also check for known admin emails
+          const userEmail = data.user.email || email;
+          if (!adminData && userEmail.toLowerCase() === 'admin@opulence.com') {
+            console.log('Recognized known admin email, granting admin access');
+            adminData = { role: 'admin', is_active: true };
+          }
+
+          console.log('Admin check result:', adminData);
+
+          // Use the newly created customer data directly
+          customerData = {
+            ...newCustomer,
+            role: adminData ? adminData.role : 'user',
+            is_active: adminData ? adminData.is_active : true,
+          };
+
+          console.log('Final customerData:', customerData);
+        } else {
+          console.error('Failed to create customer record:', customerError);
+          console.error('Error details:', customerError?.message, customerError?.details, customerError?.hint);
         }
       }
 
       if (!customerData) {
+        console.error('Still no customerData after creation attempt');
         await supabase.auth.signOut();
-        throw new Error('Account setup incomplete. Please contact support.');
+        throw new Error('Account setup incomplete. Please try again or contact support.');
       }
+
+      console.log('Login successful with customerData:', customerData);
 
       toast({
         title: 'Welcome back!',

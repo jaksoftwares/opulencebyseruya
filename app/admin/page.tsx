@@ -18,14 +18,14 @@ import {
 } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, loading, customer } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && !isAdmin) {
       router.push('/login');
     }
-  }, [isAdmin, loading, router]);
+  }, [isAdmin, loading, customer, router]);
 
   if (loading) {
     return (
