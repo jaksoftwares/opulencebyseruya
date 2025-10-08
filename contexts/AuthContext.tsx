@@ -12,6 +12,8 @@ interface Customer {
   phone?: string;
   role: 'user' | 'admin' | 'super_admin';
   is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface AuthContextType {
@@ -34,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchCustomer = async (userId: string, userEmail?: string) => {
+  const fetchCustomer = async (userId: string, userEmail?: string, userMetadata?: any) => {
     if (!userEmail) {
       console.log('No email provided to fetchCustomer');
       return null;
@@ -75,8 +77,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    console.log('No customer found for email:', userEmail, 'normalized:', normalizedEmail);
-    return null;
+    // If no customer record exists, create one for existing auth users
+    console.log('No customer found, creating one for existing auth user:', userEmail);
+
+    const fullName = userMetadata?.full_name || userEmail.split('@')[0];
+    const phone = userMetadata?.phone || '';
+
+    const { error: createError } = await supabase
+      .from('customers')
+      .upsert({
+        email: normalizedEmail,
+        full_name: fullName,
+        phone: phone,
+      }, {
+        onConflict: 'email'
+      });
+
+    if (createError) {
+      console.error('Error creating customer record for existing user:', createError);
+      return null;
+    }
+
+    // Check if this user is an admin
+    let { data: adminData } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    // If no admin record exists, check if this is a known admin email and create the record
+    if (!adminData && normalizedEmail === 'admin@opulence.com') {
+      console.log('Creating admin record for known admin email:', normalizedEmail);
+      const { error: adminCreateError } = await supabase
+        .from('admin_users')
+        .upsert({
+          id: userId,
+          email: normalizedEmail,
+          full_name: fullName,
+          role: 'admin',
+          is_active: true,
+        }, {
+          onConflict: 'id'
+        });
+
+      if (!adminCreateError) {
+        // Fetch the newly created admin data
+        const adminResult = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('id', userId)
+          .eq('is_active', true)
+          .maybeSingle();
+        adminData = adminResult.data;
+      }
+    }
+
+    // Return the newly created customer data
+    return {
+      id: userId, // This will be updated when we run the migration
+      email: normalizedEmail,
+      full_name: fullName,
+      phone: phone,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      role: adminData ? adminData.role : 'user',
+      is_active: adminData ? adminData.is_active : true,
+    };
   };
 
   useEffect(() => {
@@ -86,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (session?.user) {
         setUser(session.user);
-        const customerData = await fetchCustomer(session.user.id, session.user.email);
+        const customerData = await fetchCustomer(session.user.id, session.user.email, session.user.user_metadata);
         setCustomer(customerData);
       }
 
@@ -100,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         if (session?.user) {
           setUser(session.user);
-          const customerData = await fetchCustomer(session.user.id, session.user.email);
+          const customerData = await fetchCustomer(session.user.id, session.user.email, session.user.user_metadata);
           setCustomer(customerData);
         } else {
           setUser(null);
@@ -134,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Please confirm your email address before signing in.');
       }
 
-      let customerData = await fetchCustomer(data.user.id, data.user.email);
+      let customerData = await fetchCustomer(data.user.id, data.user.email, data.user.user_metadata);
 
       // If no customer record exists, try to create one (fallback for signup issues)
       if (!customerData) {
@@ -276,7 +343,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refetchCustomer = async () => {
     if (user) {
-      const customerData = await fetchCustomer(user.id, user.email);
+      const customerData = await fetchCustomer(user.id, user.email, user.user_metadata);
       setCustomer(customerData);
     }
   };
