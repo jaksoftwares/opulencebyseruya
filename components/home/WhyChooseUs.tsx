@@ -66,7 +66,7 @@ export default function WhyChooseUs() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   return (
-    <section className="py-20 bg-gradient-to-br from-gray-50 via-amber-50/30 to-orange-50/30 relative overflow-hidden">
+    <section className="py-8 md:py-12 bg-gradient-to-br from-gray-50 via-amber-50/30 to-orange-50/30 relative overflow-hidden">
       {/* Background Decorations */}
       <div className="absolute top-20 right-10 w-72 h-72 bg-amber-400/10 rounded-full blur-3xl animate-pulse" />
       <div className="absolute bottom-20 left-10 w-96 h-96 bg-orange-400/10 rounded-full blur-3xl animate-pulse animation-delay-2000" />
@@ -87,7 +87,7 @@ export default function WhyChooseUs() {
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             const isHovered = hoveredIndex === index;
