@@ -4,6 +4,7 @@ import { Playfair_Display, Inter } from 'next/font/google';
 import { CartProvider } from '@/contexts/CartContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
+import { Analytics} from '@vercel/analytics/react';
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
