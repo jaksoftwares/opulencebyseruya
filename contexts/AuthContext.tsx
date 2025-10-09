@@ -45,23 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Normalize email for comparison
     const normalizedEmail = userEmail.toLowerCase().trim();
 
-    // First check if user is an admin
+    // Check user metadata for role
     let adminData = null;
-    try {
-      const result = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('id', userId)
-        .eq('is_active', true)
-        .maybeSingle();
-      adminData = result.data;
-    } catch (error) {
-      console.log('Admin table query failed in fetchCustomer');
+    if (userMetadata?.role === 'admin' || userMetadata?.role === 'super_admin') {
+      adminData = { role: userMetadata.role, is_active: true };
     }
 
-    // Also check for known admin emails
+    // Also check for known admin emails as fallback
     if (!adminData && normalizedEmail === 'admin@opulence.com') {
-      adminData = { role: 'admin', is_active: true };
+      adminData = { role: 'super_admin', is_active: true };
     }
 
     // Get customer data
@@ -189,25 +181,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!customerError && newCustomer) {
           console.log('Customer created successfully:', newCustomer);
 
-          // Check if this user is an admin
+          // Check if this user is an admin from metadata
           let adminData = null;
-          try {
-            const result = await supabase
-              .from('admin_users')
-              .select('*')
-              .eq('id', data.user.id)
-              .eq('is_active', true)
-              .maybeSingle();
-            adminData = result.data;
-          } catch (error) {
-            console.log('Admin table query failed, checking known admin emails');
+          const userMetadata = data.user.user_metadata;
+          if (userMetadata?.role === 'admin' || userMetadata?.role === 'super_admin') {
+            adminData = { role: userMetadata.role, is_active: true };
           }
 
-          // Also check for known admin emails
+          // Also check for known admin emails as fallback
           const userEmail = data.user.email || email;
           if (!adminData && userEmail.toLowerCase() === 'admin@opulence.com') {
-            console.log('Recognized known admin email, granting admin access');
-            adminData = { role: 'admin', is_active: true };
+            console.log('Recognized known admin email, granting super_admin access');
+            adminData = { role: 'super_admin', is_active: true };
           }
 
           console.log('Admin check result:', adminData);

@@ -19,12 +19,28 @@ import { useToast } from '@/hooks/use-toast';
 
 interface Product {
   id: string;
-  name: string;
-  price: number;
-  stock_quantity: number;
-  is_active: boolean;
-  sku: string;
   category_id: string | null;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  compare_at_price: number | null;
+  sku: string;
+  stock_quantity: number;
+  images: string[];
+  specifications: Record<string, any>;
+  is_featured: boolean;
+  is_active: boolean;
+  rating: number | null;
+  reviews: number | null;
+  badge: string | null;
+  original_price: number | null;
+  discount: number | null;
+  sold_count: number | null;
+  stock_left: number | null;
+  tag: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Category {
@@ -46,9 +62,18 @@ export default function AdminProductsPage() {
     name: '',
     description: '',
     price: '',
+    compare_at_price: '',
+    original_price: '',
+    discount: '',
     stock_quantity: '',
+    stock_left: '',
     sku: '',
     category_id: '',
+    rating: '',
+    reviews: '',
+    badge: '',
+    tag: '',
+    is_featured: false,
     is_active: true,
   });
 
@@ -64,14 +89,41 @@ export default function AdminProductsPage() {
   }, [isAdmin, authLoading, router]);
 
   const fetchData = async () => {
-    const [productsRes, categoriesRes] = await Promise.all([
-      supabase.from('products').select('*').order('created_at', { ascending: false }),
-      supabase.from('categories').select('id, name').eq('is_active', true),
-    ]);
+    try {
+      const [productsRes, categoriesRes] = await Promise.all([
+        supabase
+          .from('products')
+          .select('id, category_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, created_at, updated_at')
+          .order('created_at', { ascending: false }),
+        supabase.from('categories').select('id, name').eq('is_active', true),
+      ]);
 
-    if (productsRes.data) setProducts(productsRes.data);
-    if (categoriesRes.data) setCategories(categoriesRes.data);
-    setLoading(false);
+      if (productsRes.error) {
+        console.error('Error fetching products:', productsRes.error);
+        toast({
+          title: 'Error',
+          description: `Failed to fetch products: ${productsRes.error.message}`,
+          variant: 'destructive',
+        });
+      } else {
+        setProducts(productsRes.data || []);
+      }
+
+      if (categoriesRes.error) {
+        console.error('Error fetching categories:', categoriesRes.error);
+      } else {
+        setCategories(categoriesRes.data || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchData:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load data',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,10 +137,21 @@ export default function AdminProductsPage() {
         slug,
         description: formData.description,
         price: parseFloat(formData.price),
+        compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
+        original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+        discount: formData.discount ? parseInt(formData.discount) : null,
         stock_quantity: parseInt(formData.stock_quantity),
+        stock_left: formData.stock_left ? parseInt(formData.stock_left) : parseInt(formData.stock_quantity),
         sku: formData.sku,
         category_id: formData.category_id || null,
+        rating: formData.rating ? parseFloat(formData.rating) : null,
+        reviews: formData.reviews ? parseInt(formData.reviews) : null,
+        badge: formData.badge || null,
+        tag: formData.tag || null,
+        is_featured: formData.is_featured,
         is_active: formData.is_active,
+        images: [],
+        specifications: {},
       };
 
       if (editingProduct) {
@@ -121,11 +184,20 @@ export default function AdminProductsPage() {
     setEditingProduct(product);
     setFormData({
       name: product.name,
-      description: '',
+      description: product.description || '',
       price: product.price.toString(),
+      compare_at_price: product.compare_at_price?.toString() || '',
+      original_price: product.original_price?.toString() || '',
+      discount: product.discount?.toString() || '',
       stock_quantity: product.stock_quantity.toString(),
+      stock_left: product.stock_left?.toString() || product.stock_quantity.toString(),
       sku: product.sku,
       category_id: product.category_id || '',
+      rating: product.rating?.toString() || '',
+      reviews: product.reviews?.toString() || '',
+      badge: product.badge || '',
+      tag: product.tag || '',
+      is_featured: product.is_featured,
       is_active: product.is_active,
     });
     setDialogOpen(true);
@@ -153,9 +225,18 @@ export default function AdminProductsPage() {
       name: '',
       description: '',
       price: '',
+      compare_at_price: '',
+      original_price: '',
+      discount: '',
       stock_quantity: '',
+      stock_left: '',
       sku: '',
       category_id: '',
+      rating: '',
+      reviews: '',
+      badge: '',
+      tag: '',
+      is_featured: false,
       is_active: true,
     });
     setEditingProduct(null);
@@ -230,6 +311,44 @@ export default function AdminProductsPage() {
                   </div>
 
                   <div>
+                    <Label htmlFor="compare_at_price">Compare At Price (KES)</Label>
+                    <Input
+                      id="compare_at_price"
+                      type="number"
+                      step="0.01"
+                      value={formData.compare_at_price}
+                      onChange={(e) => setFormData({ ...formData, compare_at_price: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="original_price">Original Price (KES)</Label>
+                    <Input
+                      id="original_price"
+                      type="number"
+                      step="0.01"
+                      value={formData.original_price}
+                      onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="discount">Discount (%)</Label>
+                    <Input
+                      id="discount"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.discount}
+                      onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
                     <Label htmlFor="stock_quantity">Stock Quantity *</Label>
                     <Input
                       id="stock_quantity"
@@ -237,6 +356,16 @@ export default function AdminProductsPage() {
                       value={formData.stock_quantity}
                       onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
                       required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="stock_left">Stock Left</Label>
+                    <Input
+                      id="stock_left"
+                      type="number"
+                      value={formData.stock_left}
+                      onChange={(e) => setFormData({ ...formData, stock_left: e.target.value })}
                     />
                   </div>
                 </div>
@@ -273,15 +402,76 @@ export default function AdminProductsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is_active"
-                    checked={formData.is_active}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="rounded"
-                  />
-                  <Label htmlFor="is_active" className="cursor-pointer">Active</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="rating">Rating (1-5)</Label>
+                    <Input
+                      id="rating"
+                      type="number"
+                      step="0.1"
+                      min="1"
+                      max="5"
+                      value={formData.rating}
+                      onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="reviews">Number of Reviews</Label>
+                    <Input
+                      id="reviews"
+                      type="number"
+                      min="0"
+                      value={formData.reviews}
+                      onChange={(e) => setFormData({ ...formData, reviews: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="badge">Badge</Label>
+                    <Input
+                      id="badge"
+                      value={formData.badge}
+                      onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
+                      placeholder="e.g., Best Seller, New, Sale"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="tag">Tag</Label>
+                    <Input
+                      id="tag"
+                      value={formData.tag}
+                      onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
+                      placeholder="e.g., Premium, Professional"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_featured"
+                      checked={formData.is_featured}
+                      onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
+                      className="rounded"
+                    />
+                    <Label htmlFor="is_featured" className="cursor-pointer">Featured</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      checked={formData.is_active}
+                      onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                      className="rounded"
+                    />
+                    <Label htmlFor="is_active" className="cursor-pointer">Active</Label>
+                  </div>
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4">
@@ -306,43 +496,107 @@ export default function AdminProductsPage() {
                   <TableHead>SKU</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Stock</TableHead>
+                  <TableHead>Rating</TableHead>
+                  <TableHead>Badge</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{product.sku}</TableCell>
-                    <TableCell>KES {product.price.toLocaleString()}</TableCell>
-                    <TableCell>{product.stock_quantity}</TableCell>
-                    <TableCell>
-                      <Badge variant={product.is_active ? 'default' : 'secondary'}>
-                        {product.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(product)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(product.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                {products.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                      No products found. Add your first product to get started.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  products.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-medium">{product.name}</div>
+                          {product.tag && (
+                            <div className="text-xs text-gray-500">{product.tag}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{product.sku}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-medium">KES {product.price.toLocaleString()}</div>
+                          {product.original_price && product.original_price > product.price && (
+                            <div className="text-xs text-gray-500 line-through">
+                              KES {product.original_price.toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div>{product.stock_quantity} total</div>
+                          {product.stock_left !== null && (
+                            <div className="text-xs text-gray-500">{product.stock_left} left</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {product.rating ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <span className="text-yellow-500">★</span>
+                              <span className="text-sm">{product.rating}</span>
+                            </div>
+                            {product.reviews && (
+                              <div className="text-xs text-gray-500">({product.reviews} reviews)</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">No rating</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {product.badge ? (
+                          <Badge variant="outline" className="text-xs">
+                            {product.badge}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant={product.is_active ? 'default' : 'secondary'}>
+                            {product.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                          {product.is_featured && (
+                            <Badge variant="outline" className="text-xs">
+                              Featured
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(product)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(product.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

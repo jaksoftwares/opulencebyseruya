@@ -38,6 +38,14 @@ export type Database = {
           specifications: Record<string, any>;
           is_featured: boolean;
           is_active: boolean;
+          rating: number | null;
+          reviews: number | null;
+          badge: string | null;
+          original_price: number | null;
+          discount: number | null;
+          sold_count: number | null;
+          stock_left: number | null;
+          tag: string | null;
           created_at: string;
           updated_at: string;
         };

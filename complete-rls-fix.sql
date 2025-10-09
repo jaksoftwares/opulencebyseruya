@@ -24,20 +24,12 @@ CREATE POLICY "Admins can manage categories"
   ON categories FOR ALL
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM customers c
-      WHERE c.id = auth.uid()
-      AND c.role IN ('admin', 'super_admin')
-      AND c.is_active = true
-    )
+    auth.uid() IS NOT NULL AND
+    (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin')
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM customers c
-      WHERE c.id = auth.uid()
-      AND c.role IN ('admin', 'super_admin')
-      AND c.is_active = true
-    )
+    auth.uid() IS NOT NULL AND
+    (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin')
   );
 
 -- Products policies
@@ -49,20 +41,12 @@ CREATE POLICY "Admins can manage products"
   ON products FOR ALL
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM customers c
-      WHERE c.id = auth.uid()
-      AND c.role IN ('admin', 'super_admin')
-      AND c.is_active = true
-    )
+    auth.uid() IS NOT NULL AND
+    (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin')
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM customers c
-      WHERE c.id = auth.uid()
-      AND c.role IN ('admin', 'super_admin')
-      AND c.is_active = true
-    )
+    auth.uid() IS NOT NULL AND
+    (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin')
   );
 
 -- Orders policies
@@ -74,32 +58,20 @@ CREATE POLICY "Admins can view all orders"
   ON orders FOR SELECT
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM customers c
-      WHERE c.id = auth.uid()
-      AND c.role IN ('admin', 'super_admin')
-      AND c.is_active = true
-    )
+    auth.uid() IS NOT NULL AND
+    (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin')
   );
 
 CREATE POLICY "Admins can update orders"
   ON orders FOR UPDATE
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM customers c
-      WHERE c.id = auth.uid()
-      AND c.role IN ('admin', 'super_admin')
-      AND c.is_active = true
-    )
+    auth.uid() IS NOT NULL AND
+    (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin')
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM customers c
-      WHERE c.id = auth.uid()
-      AND c.role IN ('admin', 'super_admin')
-      AND c.is_active = true
-    )
+    auth.uid() IS NOT NULL AND
+    (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin')
   );
 
 -- Order items policies
@@ -111,12 +83,8 @@ CREATE POLICY "Admins can view all order items"
   ON order_items FOR SELECT
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM customers c
-      WHERE c.id = auth.uid()
-      AND c.role IN ('admin', 'super_admin')
-      AND c.is_active = true
-    )
+    auth.uid() IS NOT NULL AND
+    (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin')
   );
 
 -- Customers policies
@@ -139,30 +107,26 @@ CREATE POLICY "Admins can view all customers"
   ON customers FOR SELECT
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM customers c
-      WHERE c.id = auth.uid()
-      AND c.role IN ('admin', 'super_admin')
-      AND c.is_active = true
-    )
+    auth.uid() IS NOT NULL AND
+    (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin')
   );
 
--- Step 4: Ensure admin user exists in customers table with correct role
--- Replace 'your-admin-user-id-here' with the actual auth.users ID of your admin
--- You can find this in Supabase Auth > Users
-INSERT INTO customers (id, email, full_name, role, is_active)
-SELECT
-  au.id,
-  au.email,
-  COALESCE(au.raw_user_meta_data->>'full_name', 'Admin User'),
-  'super_admin',
-  true
-FROM auth.users au
-WHERE au.email = 'admin@opulence.com'  -- Replace with your admin email
-ON CONFLICT (id) DO UPDATE SET
-  role = 'super_admin',
-  is_active = true;
+CREATE POLICY "Admins can update all customers"
+  ON customers FOR UPDATE
+  TO authenticated
+  USING (
+    auth.uid() IS NOT NULL AND
+    (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin')
+  )
+  WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin')
+  );
+
+-- Step 4: Ensure your admin user has the role in auth.users user_metadata
+-- In Supabase Auth > Users, edit your admin user and set user_metadata to:
+-- {"role": "super_admin", "full_name": "Admin User"}
 
 -- Step 5: Verify the setup
--- Run this query to check if your admin user is properly set up:
--- SELECT id, email, role, is_active FROM customers WHERE role IN ('admin', 'super_admin');
+-- Check that your admin user has role in user_metadata in auth.users
+
