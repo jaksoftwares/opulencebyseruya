@@ -21,7 +21,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Opulence by Seruya - Luxury Living for Every Home',
   description: 'Discover premium kitchenware, home decor, and lifestyle essentials. Shop elegant dinnerware, cookware, travel accessories, and more.',
-  keywords: 'luxury home goods, kitchenware Kenya, home decor, premium cookware, dinnerware sets',
+  keywords: 'luxury home goods, kitchenware Kenya, home decor, premium cookware, dinnerware sets and travel essentials',
 };
 
 export default function RootLayout({
