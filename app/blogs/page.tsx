@@ -5,82 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, Clock, Tag, ArrowRight, Search } from 'lucide-react';
-
-// Sample blog data - replace with your actual data source
-const blogPosts = [
-  {
-    id: 1,
-    slug: 'art-of-table-setting',
-    title: 'The Art of Table Setting: Creating Memorable Dining Experiences',
-    excerpt: 'Discover how thoughtful table arrangements can transform everyday meals into occasions of grace and connection.',
-    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&q=80',
-    category: 'Home & Lifestyle',
-    author: 'Seruya Team',
-    date: '2024-03-15',
-    readTime: '5 min read',
-    featured: true
-  },
-  {
-    id: 2,
-    slug: 'organizing-kitchen-with-purpose',
-    title: 'Organizing Your Kitchen with Purpose and Beauty',
-    excerpt: 'Learn practical tips for creating a kitchen that blends functionality with aesthetic appeal.',
-    image: 'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?w=800&q=80',
-    category: 'Kitchen Tips',
-    author: 'Seruya Team',
-    date: '2024-03-10',
-    readTime: '7 min read',
-    featured: true
-  },
-  {
-    id: 3,
-    slug: 'sustainable-luxury-living',
-    title: 'Sustainable Luxury: Living Well with Intention',
-    excerpt: 'Explore how conscious choices in home essentials can create abundance that honors both beauty and responsibility.',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80',
-    category: 'Sustainable Living',
-    author: 'Seruya Team',
-    date: '2024-03-05',
-    readTime: '6 min read',
-    featured: true
-  },
-  {
-    id: 4,
-    slug: 'hosting-with-grace',
-    title: 'Hosting with Grace: A Guide to Elegant Entertaining',
-    excerpt: 'From intimate gatherings to grand celebrations, discover the secrets to hosting that leaves lasting impressions.',
-    image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&q=80',
-    category: 'Entertaining',
-    author: 'Seruya Team',
-    date: '2024-02-28',
-    readTime: '8 min read',
-    featured: false
-  },
-  {
-    id: 5,
-    slug: 'seasonal-home-refresh',
-    title: 'Seasonal Home Refresh: Small Changes, Big Impact',
-    excerpt: 'Simple yet transformative ways to update your living space throughout the year.',
-    image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80',
-    category: 'Home Decor',
-    author: 'Seruya Team',
-    date: '2024-02-20',
-    readTime: '5 min read',
-    featured: false
-  },
-  {
-    id: 6,
-    slug: 'mindful-morning-rituals',
-    title: 'Mindful Morning Rituals: Starting Your Day with Intention',
-    excerpt: 'Create a morning routine that nourishes your spirit and sets the tone for purposeful living.',
-    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80',
-    category: 'Lifestyle',
-    author: 'Seruya Team',
-    date: '2024-02-15',
-    readTime: '4 min read',
-    featured: false
-  }
-];
+import { blogPosts } from '@/constants/blogPosts';
 
 const categories = ['All', 'Home & Lifestyle', 'Kitchen Tips', 'Sustainable Living', 'Entertaining', 'Home Decor', 'Lifestyle'];
 
@@ -167,7 +92,7 @@ export default function BlogsPage() {
                 {featuredPosts.map((post) => (
                   <a
                     key={post.id}
-                    href={`/blog/${post.slug}`}
+                    href={`/blogs/${post.slug}`}
                     className="group"
                   >
                     <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden h-full">
@@ -237,7 +162,7 @@ export default function BlogsPage() {
                   {regularPosts.map((post) => (
                     <a
                       key={post.id}
-                      href={`/blog/${post.slug}`}
+                      href={`/blogs/${post.slug}`}
                       className="group"
                     >
                       <Card className="border-0 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden h-full bg-white">
