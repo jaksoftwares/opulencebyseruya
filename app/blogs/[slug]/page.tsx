@@ -29,27 +29,29 @@ export default function BlogPostPage() {
   const [isLiked, setIsLiked] = useState(false);
   const [blogPost, setBlogPost] = useState<BlogPost | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Find the current blog post
     const currentPost = blogPosts.find(post => post.slug === slug);
     setBlogPost(currentPost || null);
+    setIsLoading(false);
 
     if (currentPost) {
       // Get related posts from the same category, excluding the current post
       const related = blogPosts
-        .filter(post => 
-          post.category === currentPost.category && 
+        .filter(post =>
+          post.category === currentPost.category &&
           post.slug !== currentPost.slug
         )
         .slice(0, 3);
       
-      // If we don't have enough related posts from the same category, 
+      // If we don't have enough related posts from the same category,
       // fill with other posts
       if (related.length < 3) {
         const additionalPosts = blogPosts
-          .filter(post => 
-            post.slug !== currentPost.slug && 
+          .filter(post =>
+            post.slug !== currentPost.slug &&
             !related.some(relatedPost => relatedPost.slug === post.slug)
           )
           .slice(0, 3 - related.length);
@@ -61,6 +63,23 @@ export default function BlogPostPage() {
     }
   }, [slug]);
 
+  // Show loading state while checking for the blog post
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading blog post...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Show not found only after loading is complete and no blog post was found
   if (!blogPost) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -69,8 +88,8 @@ export default function BlogPostPage() {
           <div className="text-center">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">Blog Post Not Found</h1>
             <p className="text-gray-600 mb-8">The blog post you&apos;re looking for doesn&apos;t exist.</p>
-            <a 
-              href="/blogs" 
+            <a
+              href="/blogs"
               className="inline-flex items-center gap-2 bg-amber-600 text-white px-6 py-3 rounded-full hover:bg-amber-700 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
