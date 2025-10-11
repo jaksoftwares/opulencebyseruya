@@ -30,7 +30,13 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(customers);
+    return NextResponse.json(customers, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

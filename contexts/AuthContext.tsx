@@ -87,10 +87,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
 
-      if (session?.user) {
+      // Check if session is expired
+      if (session && session.expires_at && session.expires_at * 1000 < Date.now()) {
+        console.log('Session expired, signing out');
+        await supabase.auth.signOut();
+        setUser(null);
+        setCustomer(null);
+      } else if (session?.user) {
         setUser(session.user);
         const customerData = await fetchCustomer(session.user.id, session.user.email, session.user.user_metadata);
         setCustomer(customerData);
+      } else {
+        setUser(null);
+        setCustomer(null);
       }
 
       setLoading(false);
