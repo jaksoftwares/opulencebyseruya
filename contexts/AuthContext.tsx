@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchCustomer = async (userId: string, userEmail?: string, userMetadata?: any, retryCount = 0) => {
+  const fetchCustomer = async (userId: string, userEmail?: string, userMetadata?: any, retryCount = 0): Promise<Customer | null> => {
     if (!userEmail) {
       console.log('No email provided to fetchCustomer');
       return null;
