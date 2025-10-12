@@ -44,6 +44,15 @@ export default function ShopPage() {
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
   const [showOnlyFeatured, setShowOnlyFeatured] = useState(false);
 
+  // Handle URL search parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get('search');
+    if (searchParam) {
+      setSearchQuery(decodeURIComponent(searchParam));
+    }
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       const [productsResponse, categoriesResponse] = await Promise.all([

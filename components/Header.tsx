@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+import GlobalSearch from '@/components/GlobalSearch';
 import { useState } from 'react';
 
 export default function Header() {
@@ -67,9 +68,7 @@ export default function Header() {
           </nav>
 
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon" className="hidden md:flex">
-              <Search className="h-5 w-5" />
-            </Button>
+            <GlobalSearch />
 
             <Link href="/cart">
               <Button variant="ghost" size="icon" className="relative">
@@ -150,6 +149,10 @@ export default function Header() {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px]">
                 <div className="flex flex-col space-y-4 mt-8">
+                  {/* Mobile Search */}
+                  <div className="pb-4 border-b">
+                    <GlobalSearch className="w-full" />
+                  </div>
                   {navLinks.map((link) => (
                     <Link
                       key={link.href}
