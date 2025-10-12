@@ -19,7 +19,7 @@ import { useState } from 'react';
 
 export default function Header() {
   const { cartCount } = useCart();
-  const { customer, isAdmin, signOut } = useAuth();
+  const { customer, isAdmin, signOut, loading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
@@ -82,7 +82,11 @@ export default function Header() {
               </Button>
             </Link>
 
-            {customer ? (
+            {loading ? (
+              <Button variant="ghost" size="icon" className="hidden md:flex" disabled>
+                <User className="h-5 w-5 animate-pulse" />
+              </Button>
+            ) : customer ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="hidden md:flex items-center space-x-2">
@@ -157,7 +161,15 @@ export default function Header() {
                     </Link>
                   ))}
 
-                  {customer ? (
+                  {loading ? (
+                    <div className="pt-4 border-t">
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded w-20 mb-2"></div>
+                        <div className="h-6 bg-gray-200 rounded w-16 mb-2"></div>
+                        <div className="h-6 bg-gray-200 rounded w-20"></div>
+                      </div>
+                    </div>
+                  ) : customer ? (
                     <>
                       <div className="pt-4 border-t">
                         <p className="text-sm text-gray-600 mb-2">Hi, {customer.full_name.split(' ')[0]}</p>

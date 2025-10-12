@@ -34,19 +34,17 @@ export default function Hero() {
 
   useEffect(() => {
     if (!isAutoPlaying) return;
-    
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, 5000);
-
     return () => clearInterval(timer);
   }, [isAutoPlaying]);
 
   const slide = heroSlides[currentSlide];
 
   return (
-    <section className="relative h-[600px] md:h-[700px] overflow-hidden">
-      {/* Background Image with Overlay */}
+    <section className="relative h-[85vh] min-h-[500px] sm:min-h-[600px] md:min-h-[700px] overflow-hidden">
+      {/* Background Image Layer */}
       <div className="absolute inset-0">
         {heroSlides.map((s, idx) => (
           <div
@@ -59,65 +57,65 @@ export default function Hero() {
               className="absolute inset-0 bg-cover bg-center transform scale-105 animate-[zoomIn_20s_ease-out]"
               style={{
                 backgroundImage: `url(${s.image})`,
-                animation: idx === currentSlide ? 'zoomIn 20s ease-out forwards' : 'none'
+                animation: idx === currentSlide ? 'zoomIn 20s ease-out forwards' : 'none',
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-b sm:bg-gradient-to-r from-black/80 via-black/60 to-transparent" />
           </div>
         ))}
       </div>
 
-      {/* Content */}
-      <div className="relative h-full container mx-auto px-4">
-        <div className="flex items-center h-full">
-          <div className="max-w-2xl text-white">
-            {/* Decorative Element */}
-            <div className="flex items-center gap-2 mb-6 animate-fadeIn">
-              <Sparkles className="h-6 w-6 text-amber-400" />
-              <span className="text-amber-400 font-medium tracking-wider uppercase text-sm">
-                Opulence by Seruya
-              </span>
-            </div>
+      {/* Main Content */}
+      <div className="relative h-full container mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
+        <div className="max-w-2xl text-white">
+          {/* Tagline */}
+          <div className="flex items-center gap-2 mb-4 sm:mb-6 animate-fadeIn">
+            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-amber-400" />
+            <span className="text-amber-400 font-medium tracking-wider uppercase text-xs sm:text-sm">
+              Opulence by Seruya
+            </span>
+          </div>
 
-            {/* Main Heading */}
-            <h1 className="font-serif text-5xl md:text-7xl font-bold mb-4 leading-tight animate-slideUp">
-              {slide.title}
-              <span className="block text-amber-400 mt-2">{slide.subtitle}</span>
-            </h1>
+          {/* Title */}
+          <h1 className="font-serif text-4xl sm:text-5xl md:text-7xl font-bold mb-3 sm:mb-4 leading-tight animate-slideUp">
+            {slide.title}
+            <span className="block text-amber-400 mt-1 sm:mt-2">{slide.subtitle}</span>
+          </h1>
 
-            {/* Description */}
-            <p className="text-xl md:text-2xl text-gray-200 mb-8 leading-relaxed animate-slideUp animation-delay-200">
-              {slide.description}
-            </p>
+          {/* Description */}
+          <p className="text-base sm:text-lg md:text-2xl text-gray-200 mb-6 sm:mb-8 leading-relaxed animate-slideUp animation-delay-200">
+            {slide.description}
+          </p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 animate-slideUp animation-delay-400">
-              <Link href="/shop">
-                <button className="group bg-amber-500 hover:bg-amber-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/50 hover:scale-105 flex items-center justify-center gap-2">
-                  Explore Collection
-                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </button>
-              </Link>
-              <Link href="/categories">
-                <button className="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border-2 border-white/30 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 hover:scale-105">
-                  Shop by Category
-                </button>
-              </Link>
-            </div>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 animate-slideUp animation-delay-400">
+            <Link href="/shop">
+              <button className="group bg-amber-500 hover:bg-amber-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg text-base sm:text-lg font-semibold transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/50 hover:scale-105 flex items-center justify-center gap-2">
+                Explore Collection
+                <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </Link>
+            <Link href="/categories">
+              <button className="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border-2 border-white/30 px-6 sm:px-8 py-3 sm:py-4 rounded-lg text-base sm:text-lg font-semibold transition-all duration-300 hover:scale-105">
+                Shop by Category
+              </button>
+            </Link>
+          </div>
 
-            {/* Stats */}
-            <div className="flex gap-8 mt-12 animate-slideUp animation-delay-600">
+          {/* Stats Section */}
+          <div className="mt-10 sm:mt-12 animate-slideUp animation-delay-600">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center sm:text-left">
               <div>
-                <div className="text-3xl font-bold text-amber-400">500+</div>
-                <div className="text-sm text-gray-300">Premium Products</div>
+                <div className="text-3xl sm:text-4xl font-bold text-amber-400">500+</div>
+                <div className="text-sm sm:text-base text-gray-300">Premium Products</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-amber-400">10k+</div>
-                <div className="text-sm text-gray-300">Happy Customers</div>
+                <div className="text-3xl sm:text-4xl font-bold text-amber-400">10k+</div>
+                <div className="text-sm sm:text-base text-gray-300">Happy Customers</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-amber-400">100%</div>
-                <div className="text-sm text-gray-300">Quality Guaranteed</div>
+                <div className="text-3xl sm:text-4xl font-bold text-amber-400">100%</div>
+                <div className="text-sm sm:text-base text-gray-300">Quality Guaranteed</div>
               </div>
             </div>
           </div>
@@ -125,7 +123,7 @@ export default function Hero() {
       </div>
 
       {/* Slide Indicators */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-3 z-10">
+      <div className="absolute bottom-6 sm:bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2 sm:gap-3 z-10">
         {heroSlides.map((_, idx) => (
           <button
             key={idx}
@@ -133,10 +131,10 @@ export default function Hero() {
               setCurrentSlide(idx);
               setIsAutoPlaying(false);
             }}
-            className={`h-2 rounded-full transition-all duration-300 ${
+            className={`h-1.5 sm:h-2 rounded-full transition-all duration-300 ${
               idx === currentSlide
-                ? 'w-12 bg-amber-400'
-                : 'w-8 bg-white/50 hover:bg-white/70'
+                ? 'w-8 sm:w-12 bg-amber-400'
+                : 'w-4 sm:w-8 bg-white/50 hover:bg-white/70'
             }`}
           />
         ))}
@@ -194,40 +192,3 @@ export default function Hero() {
     </section>
   );
 }
-
-// import Link from 'next/link';
-// import { Button } from '@/components/ui/button';
-// import { ArrowRight } from 'lucide-react';
-
-// export default function Hero() {
-//   return (
-//     <section className="relative bg-gradient-to-br from-amber-50 via-white to-amber-50">
-//       <div className="container mx-auto px-4 py-20 md:py-32">
-//         <div className="max-w-3xl mx-auto text-center">
-//           <h1 className="font-serif text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-//             Luxury Living for
-//             <span className="block text-amber-600">Every Home</span>
-//           </h1>
-//           <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-//             Discover premium kitchenware, elegant home decor, and lifestyle essentials that transform your house into a home of opulence.
-//           </p>
-//           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-//             <Link href="/shop">
-//               <Button size="lg" className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-6 text-lg">
-//                 Shop Now
-//                 <ArrowRight className="ml-2 h-5 w-5" />
-//               </Button>
-//             </Link>
-//             <Link href="/categories">
-//               <Button size="lg" variant="outline" className="border-2 border-amber-600 text-amber-600 hover:bg-amber-50 px-8 py-6 text-lg">
-//                 Browse Categories
-//               </Button>
-//             </Link>
-//           </div>
-//         </div>
-//       </div>
-
-//       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-300 to-transparent"></div>
-//     </section>
-//   );
-// }

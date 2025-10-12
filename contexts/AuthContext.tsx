@@ -36,73 +36,185 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchCustomer = async (userId: string, userEmail?: string, userMetadata?: any) => {
+  const fetchCustomer = async (userId: string, userEmail?: string, userMetadata?: any, retryCount = 0) => {
     if (!userEmail) {
       console.log('No email provided to fetchCustomer');
       return null;
     }
 
-    // Normalize email for comparison
-    const normalizedEmail = userEmail.toLowerCase().trim();
+    try {
+      // Normalize email for comparison
+      const normalizedEmail = userEmail.toLowerCase().trim();
 
-    // Check user metadata for role
-    let adminData = null;
-    if (userMetadata?.role === 'admin' || userMetadata?.role === 'super_admin') {
-      adminData = { role: userMetadata.role, is_active: true };
-    }
+      // Check user metadata for role
+      let adminData = null;
+      if (userMetadata?.role === 'admin' || userMetadata?.role === 'super_admin') {
+        adminData = { role: userMetadata.role, is_active: true };
+      }
 
-    // Also check for known admin emails as fallback
-    if (!adminData && normalizedEmail === 'admin@opulence.com') {
-      adminData = { role: 'super_admin', is_active: true };
-    }
+      // Also check for known admin emails as fallback
+      if (!adminData && normalizedEmail === 'admin@opulence.com') {
+        adminData = { role: 'super_admin', is_active: true };
+      }
 
-    // Get customer data
-    const { data: customerData, error } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('email', normalizedEmail)
-      .maybeSingle();
+      // Get customer data with cache control
+      const { data: customerData, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
 
-    if (error) {
-      console.error('Error fetching customer:', error);
+      if (error) {
+        console.error('Error fetching customer:', error);
+        
+        // Retry once on network errors
+        if (retryCount === 0 && (error.message.includes('network') || error.message.includes('timeout'))) {
+          console.log('Retrying customer fetch...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return fetchCustomer(userId, userEmail, userMetadata, 1);
+        }
+        
+        return null;
+      }
+
+      if (customerData) {
+        // Return customer with role information
+        return {
+          ...customerData,
+          role: adminData ? adminData.role : 'user',
+          is_active: adminData ? adminData.is_active : true,
+        };
+      }
+
+      // Customer record not found
+      console.log('No customer found for email:', userEmail);
+      return null;
+    } catch (error) {
+      console.error('Unexpected error in fetchCustomer:', error);
       return null;
     }
+  };
 
-    if (customerData) {
-      // Return customer with role information
-      return {
-        ...customerData,
-        role: adminData ? adminData.role : 'user',
-        is_active: adminData ? adminData.is_active : true,
-      };
+  // Session refresh mechanism
+  const refreshSession = async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('Session refresh failed:', error);
+        return false;
+      }
+      return !!session;
+    } catch (error) {
+      console.error('Error refreshing session:', error);
+      return false;
+    }
+  };
+
+  // Auto-refresh session before expiry
+  useEffect(() => {
+    let refreshTimer: NodeJS.Timeout;
+
+    const setupSessionRefresh = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.expires_at) {
+        const expiresAt = session.expires_at * 1000;
+        const now = Date.now();
+        const timeUntilExpiry = expiresAt - now;
+        
+        // Refresh 5 minutes before expiry
+        const refreshTime = Math.max(timeUntilExpiry - 5 * 60 * 1000, 60 * 1000);
+        
+        if (refreshTime > 0) {
+          refreshTimer = setTimeout(async () => {
+            console.log('Auto-refreshing session...');
+            const refreshed = await refreshSession();
+            if (refreshed) {
+              setupSessionRefresh(); // Setup next refresh
+            }
+          }, refreshTime);
+        }
+      }
+    };
+
+    if (user) {
+      setupSessionRefresh();
     }
 
-    // Customer record not found
-    console.log('No customer found for email:', userEmail);
-    return null;
-  };
+    return () => {
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+      }
+    };
+  }, [user]);
 
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        setLoading(true);
+        
+        // Get current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setUser(null);
+          setCustomer(null);
+          setLoading(false);
+          return;
+        }
 
-      // Check if session is expired
-      if (session && session.expires_at && session.expires_at * 1000 < Date.now()) {
-        console.log('Session expired, signing out');
-        await supabase.auth.signOut();
+        // Check if session exists and is valid
+        if (session?.user) {
+          // Validate session is not expired
+          if (session.expires_at && session.expires_at * 1000 < Date.now()) {
+            console.log('Session expired, signing out');
+            await supabase.auth.signOut();
+            setUser(null);
+            setCustomer(null);
+            setLoading(false);
+            return;
+          }
+
+          // Validate the session with the server by making an authenticated request
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          
+          if (userError || !user) {
+            console.log('Session invalid, signing out:', userError?.message);
+            await supabase.auth.signOut();
+            setUser(null);
+            setCustomer(null);
+            setLoading(false);
+            return;
+          }
+
+          // Set user first
+          setUser(user);
+          
+          // Fetch customer data
+          const customerData = await fetchCustomer(user.id, user.email, user.user_metadata);
+          
+          // Only set customer if data was successfully fetched
+          if (customerData) {
+            setCustomer(customerData);
+          } else {
+            console.log('Failed to fetch customer data, signing out');
+            await supabase.auth.signOut();
+            setUser(null);
+            setCustomer(null);
+          }
+        } else {
+          setUser(null);
+          setCustomer(null);
+        }
+      } catch (error) {
+        console.error('Error during session initialization:', error);
         setUser(null);
         setCustomer(null);
-      } else if (session?.user) {
-        setUser(session.user);
-        const customerData = await fetchCustomer(session.user.id, session.user.email, session.user.user_metadata);
-        setCustomer(customerData);
-      } else {
-        setUser(null);
-        setCustomer(null);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     getInitialSession();
@@ -110,15 +222,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          setUser(session.user);
-          const customerData = await fetchCustomer(session.user.id, session.user.email, session.user.user_metadata);
-          setCustomer(customerData);
-        } else {
+        console.log('Auth state change:', event, session?.user?.id);
+        
+        try {
+          if (event === 'SIGNED_OUT' || !session?.user) {
+            setUser(null);
+            setCustomer(null);
+            setLoading(false);
+            return;
+          }
+
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            setUser(session.user);
+            const customerData = await fetchCustomer(session.user.id, session.user.email, session.user.user_metadata);
+            
+            if (customerData) {
+              setCustomer(customerData);
+            } else {
+              console.log('Failed to fetch customer data after auth change');
+              await supabase.auth.signOut();
+              setUser(null);
+              setCustomer(null);
+            }
+          }
+        } catch (error) {
+          console.error('Error handling auth state change:', error);
           setUser(null);
           setCustomer(null);
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 

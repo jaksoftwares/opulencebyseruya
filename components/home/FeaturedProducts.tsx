@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Heart, ShoppingCart, Eye, Star, TrendingUp, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 
 interface Product {
@@ -35,25 +36,17 @@ export default function FeaturedProducts() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch categories
-        const { data: categoriesData, error: categoriesError } = await supabase
+        const { data: categoriesData } = await supabase
           .from('categories')
           .select('id, name, slug')
           .eq('is_active', true)
           .order('display_order');
 
-        if (categoriesError) {
-          console.error('Error fetching categories:', categoriesError);
-        } else if (categoriesData) {
-          const formattedCategories = [
-            { id: 'all', name: 'All Products', slug: 'all' },
-            ...categoriesData
-          ];
-          setCategories(formattedCategories);
+        if (categoriesData) {
+          setCategories([{ id: 'all', name: 'All Products', slug: 'all' }, ...categoriesData]);
         }
 
-        // Fetch featured products
-        const { data: productsData, error: productsError } = await supabase
+        const { data: productsData } = await supabase
           .from('products')
           .select('*')
           .eq('is_active', true)
@@ -61,41 +54,39 @@ export default function FeaturedProducts() {
           .order('created_at', { ascending: false })
           .limit(8);
 
-        if (productsError) {
-          console.error('Error fetching products:', productsError);
-        } else if (productsData) {
-          const formattedProducts: Product[] = productsData.map((product: any) => ({
-            id: product.id,
-            name: product.name,
-            slug: product.slug,
-            price: product.price,
-            compareAtPrice: product.original_price || product.compare_at_price,
-            image: product.images && product.images.length > 0 ? product.images[0] : 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=800',
-            rating: 4.5 + Math.random() * 0.5, // Random rating between 4.5-5.0
-            reviews: Math.floor(Math.random() * 200) + 50, // Random reviews between 50-250
-            badge: Math.random() > 0.7 ? (Math.random() > 0.5 ? 'bestseller' : 'trending') : undefined,
-            categoryId: product.category_id
-          }));
-          setAllProducts(formattedProducts);
-          setProducts(formattedProducts);
+        if (productsData) {
+          const formatted: Product[] = productsData.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          slug: p.slug,
+          price: p.price,
+          compareAtPrice: p.original_price || p.compare_at_price,
+          image:
+            p.images?.[0] ||
+            'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=800',
+          rating: 4.5 + Math.random() * 0.5,
+          reviews: Math.floor(Math.random() * 200) + 50,
+          badge: (Math.random() > 0.7
+            ? Math.random() > 0.5
+              ? 'bestseller'
+              : 'trending'
+            : undefined) as 'new' | 'bestseller' | 'trending' | undefined, // 👈 FIXED
+          categoryId: p.category_id,
+        }));
+
+          setAllProducts(formatted);
+          setProducts(formatted);
         }
-      } catch (error) {
-        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
   useEffect(() => {
-    if (selectedCategory === 'all') {
-      setProducts(allProducts);
-    } else {
-      const filtered = allProducts.filter(product => product.categoryId === selectedCategory);
-      setProducts(filtered);
-    }
+    if (selectedCategory === 'all') setProducts(allProducts);
+    else setProducts(allProducts.filter(p => p.categoryId === selectedCategory));
   }, [selectedCategory, allProducts]);
 
   const getBadgeConfig = (badge?: string) => {
@@ -112,7 +103,7 @@ export default function FeaturedProducts() {
   };
 
   return (
-    <section className="py-8 md:py-12 bg-white relative overflow-hidden">
+    <section className="py-10 md:py-16 bg-white relative overflow-hidden">
       <style jsx>{`
         .scrollbar-hide {
           -ms-overflow-style: none;
@@ -122,39 +113,40 @@ export default function FeaturedProducts() {
           display: none;
         }
       `}</style>
-      {/* Background Decoration */}
-      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-full h-96 bg-gradient-to-b from-amber-50/50 to-transparent" />
-      
-      <div className="container mx-auto px-4 relative">
+
+      {/* Background Accent */}
+      <div className="absolute inset-0 bg-gradient-to-b from-amber-50/50 to-transparent" />
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-10 md:mb-14">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 rounded-full mb-4">
             <Star className="h-4 w-4 text-amber-600 fill-amber-600" />
             <span className="text-amber-800 font-medium text-sm">Handpicked for You</span>
           </div>
-          <h2 className="font-serif text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-3">
             Featured Products
           </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+          <p className="text-gray-600 max-w-2xl mx-auto text-base sm:text-lg">
             Discover our most popular and premium items, loved by thousands of customers
           </p>
         </div>
 
         {/* Category Filter */}
-        <div className="mb-12">
+        <div className="mb-10 md:mb-14">
           <div className="flex justify-center">
-            <div className="flex gap-3 overflow-x-auto pb-2 px-4 sm:px-0 max-w-full scrollbar-hide">
-              {categories.map((category) => (
+            <div className="flex gap-3 overflow-x-auto pb-2 px-2 sm:px-0 max-w-full scrollbar-hide">
+              {categories.map(cat => (
                 <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`px-4 sm:px-6 py-3 rounded-full font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
-                    selectedCategory === category.id
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold text-sm sm:text-base transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
+                    selectedCategory === cat.id
                       ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 scale-105'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {category.name}
+                  {cat.name}
                 </button>
               ))}
             </div>
@@ -162,127 +154,116 @@ export default function FeaturedProducts() {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {loading ? (
-            // Loading skeleton
-            Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="bg-white rounded-2xl overflow-hidden shadow-md animate-pulse">
-                <div className="h-64 bg-gray-200"></div>
-                <div className="p-5 space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                  <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-6 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </div>
-            ))
-          ) : products.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <p className="text-gray-600 text-lg">No featured products available.</p>
-            </div>
-          ) : (
-            products.map((product) => {
-            const isHovered = hoveredProduct === product.id;
-            const badgeConfig = getBadgeConfig(product.badge);
-            const BadgeIcon = badgeConfig?.icon;
-            const discount = product.compareAtPrice
-              ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
-              : 0;
-
-            return (
-              <div
-                key={product.id}
-                onMouseEnter={() => setHoveredProduct(product.id)}
-                onMouseLeave={() => setHoveredProduct(null)}
-                className="group relative bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
-              >
-                {/* Image Container */}
-                <Link href={`/products/${product.slug}`}>
-                  <div className="relative h-64 overflow-hidden bg-gray-100">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
-                    />
-
-                    {/* Badges */}
-                    <div className="absolute top-3 left-3 flex flex-col gap-2">
-                      {badgeConfig && (
-                        <div className={`flex items-center gap-1 px-3 py-1 bg-gradient-to-r ${badgeConfig.color} text-white text-xs font-bold rounded-full shadow-lg`}>
-                          {BadgeIcon && <BadgeIcon className="h-3 w-3" />}
-                          {badgeConfig.text}
-                        </div>
-                      )}
-                      {discount > 0 && (
-                        <div className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
-                          -{discount}%
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className={`absolute top-3 right-3 flex flex-col gap-2 transition-all duration-300 ${
-                      isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'
-                    }`}>
-                      <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-amber-500 hover:text-white transition-colors group/btn">
-                        <Heart className="h-5 w-5" />
-                      </button>
-                      <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-amber-500 hover:text-white transition-colors group/btn">
-                        <Eye className="h-5 w-5" />
-                      </button>
-                    </div>
-
-                    {/* Overlay CTA */}
-                    <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 transition-all duration-300 ${
-                      isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                    }`}>
-                      <button className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors">
-                        <ShoppingCart className="h-4 w-4" />
-                        Add to Cart
-                      </button>
-                    </div>
-                  </div>
-                </Link>
-
-                {/* Product Info */}
-                <div className="p-5">
-                  {/* Rating */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                      <span className="font-semibold text-sm">{product.rating}</span>
-                    </div>
-                    <span className="text-gray-400 text-xs">({product.reviews} reviews)</span>
-                  </div>
-
-                  {/* Product Name */}
-                  <Link href={`/products/${product.slug}`}>
-                    <h3 className="font-bold text-lg text-gray-900 mb-3 group-hover:text-amber-600 transition-colors line-clamp-2 min-h-[56px]">
-                      {product.name}
-                    </h3>
-                  </Link>
-
-                  {/* Price */}
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-gray-900">
-                      KSh {product.price.toLocaleString()}
-                    </span>
-                    {product.compareAtPrice && (
-                      <span className="text-sm text-gray-400 line-through">
-                        KSh {product.compareAtPrice.toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-            })
-          )}
+        {/* Products Horizontal Scroll */}
+<div className="relative mb-10">
+  <div className="flex gap-6 overflow-x-auto scrollbar-hide pb-6 snap-x snap-mandatory">
+    {loading ? (
+      Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="min-w-[250px] sm:min-w-[280px] bg-white rounded-2xl overflow-hidden shadow-md animate-pulse snap-start"
+        >
+          <div className="h-56 sm:h-64 bg-gray-200" />
+          <div className="p-5 space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+          </div>
         </div>
+      ))
+    ) : products.length === 0 ? (
+      <div className="w-full text-center py-10">
+        <p className="text-gray-600 text-base sm:text-lg">
+          No featured products available.
+        </p>
+      </div>
+    ) : (
+      products.map(product => {
+        const isHovered = hoveredProduct === product.id;
+        const badge = getBadgeConfig(product.badge);
+        const BadgeIcon = badge?.icon;
+        const discount =
+          product.compareAtPrice && product.compareAtPrice > product.price
+            ? Math.round(
+                ((product.compareAtPrice - product.price) / product.compareAtPrice) * 100
+              )
+            : 0;
+
+        return (
+          <div
+            key={product.id}
+            onMouseEnter={() => setHoveredProduct(product.id)}
+            onMouseLeave={() => setHoveredProduct(null)}
+            className="group min-w-[250px] sm:min-w-[280px] bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 snap-start"
+          >
+            {/* Image */}
+            <Link href={`/products/${product.slug}`}>
+              <div className="relative h-56 sm:h-64 bg-gray-100 overflow-hidden">
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  priority
+                />
+
+                {/* Badges */}
+                <div className="absolute top-3 left-3 flex flex-col gap-2">
+                  {badge && (
+                    <div
+                      className={`flex items-center gap-1 px-3 py-1 bg-gradient-to-r ${badge.color} text-white text-xs font-bold rounded-full shadow-lg`}
+                    >
+                      {BadgeIcon && <BadgeIcon className="h-3 w-3" />}
+                      {badge.text}
+                    </div>
+                  )}
+                  {discount > 0 && (
+                    <div className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+                      -{discount}%
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Link>
+
+            {/* Product Info */}
+            <div className="p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                <span className="font-semibold text-sm">
+                  {product.rating.toFixed(1)}
+                </span>
+                <span className="text-gray-400 text-xs">({product.reviews})</span>
+              </div>
+
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-2 line-clamp-2 group-hover:text-amber-600 transition-colors">
+                {product.name}
+              </h3>
+
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg sm:text-2xl font-bold text-gray-900">
+                  KSh {product.price.toLocaleString()}
+                </span>
+                {product.compareAtPrice && (
+                  <span className="text-sm text-gray-400 line-through">
+                    KSh {product.compareAtPrice.toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })
+    )}
+  </div>
+</div>
+
 
         {/* View All Button */}
         <div className="text-center">
           <Link href="/shop">
-            <button className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-full font-bold hover:shadow-2xl hover:shadow-amber-500/30 transition-all duration-300 hover:scale-105">
+            <button className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-full font-bold hover:shadow-2xl hover:shadow-amber-500/30 transition-all duration-300 hover:scale-105 text-sm sm:text-base">
               View All Products
               <Sparkles className="h-5 w-5" />
             </button>
