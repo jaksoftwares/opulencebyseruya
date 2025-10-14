@@ -217,7 +217,7 @@ export default function AdminProductsPage() {
         throw new Error(errorText || 'Failed to add product');
       }
 
-      toast({ title: editingProduct ? 'Product updated successfully' : 'Product created successfully', description: 'Product has been uploaded and saved successfully.', variant: 'success' });
+  toast({ title: editingProduct ? 'Product updated successfully' : 'Product created successfully', description: 'Product has been uploaded and saved successfully.', variant: 'default' });
       setDialogOpen(false);
       resetForm();
       fetchData();
