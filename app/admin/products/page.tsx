@@ -53,6 +53,7 @@ export default function AdminProductsPage() {
   const { isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -154,7 +155,7 @@ export default function AdminProductsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    setUploading(true);
     try {
       const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       let imageUrls: string[] = [...existingImages];
@@ -202,9 +203,7 @@ export default function AdminProductsPage() {
       productData.reviews = formData.reviews ? parseInt(formData.reviews) : null;
       productData.badge = formData.badge || null;
       productData.tag = formData.tag || null;
-      // The following fields are always sent as null unless you want to support them in the UI
       productData.sold_count = null;
-      // created_at, updated_at are handled by Supabase defaults
 
       const method = editingProduct ? 'PUT' : 'POST';
       const res = await fetch('/api/admin/products', {
@@ -218,7 +217,7 @@ export default function AdminProductsPage() {
         throw new Error(errorText || 'Failed to add product');
       }
 
-      toast({ title: editingProduct ? 'Product updated successfully' : 'Product created successfully' });
+      toast({ title: editingProduct ? 'Product updated successfully' : 'Product created successfully', description: 'Product has been uploaded and saved successfully.', variant: 'success' });
       setDialogOpen(false);
       resetForm();
       fetchData();
@@ -228,6 +227,8 @@ export default function AdminProductsPage() {
         description: error.message,
         variant: 'destructive',
       });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -611,6 +612,11 @@ export default function AdminProductsPage() {
                 )}
 
                 {/* Step 3: Additional Details */}
+                {uploading && (
+                  <div className="flex justify-center items-center py-4">
+                    <span className="text-amber-600 font-semibold text-lg">Uploading product, please wait...</span>
+                  </div>
+                )}
                 {currentStep === 3 && (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
