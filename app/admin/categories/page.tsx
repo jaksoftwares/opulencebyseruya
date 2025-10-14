@@ -110,14 +110,16 @@ export default function AdminCategoriesPage() {
         const { uploadImageToCloudinary } = await import('@/lib/cloudinary');
         imageUrl = await uploadImageToCloudinary(imageFile);
       }
-      const categoryData = {
+      // Build categoryData strictly matching Supabase schema
+      const categoryData: any = {
         name: formData.name,
         slug,
-        description: formData.description,
-        image_url: imageUrl,
-        display_order: parseInt(formData.display_order) || 0,
-        is_active: formData.is_active,
+        description: formData.description || '',
+        image_url: imageUrl || '',
+        display_order: formData.display_order ? parseInt(formData.display_order) : 0,
+        is_active: !!formData.is_active,
       };
+      // created_at, updated_at handled by Supabase defaults
       const method = editingCategory ? 'PUT' : 'POST';
       const res = await fetch('/api/admin/categories', {
         method,
