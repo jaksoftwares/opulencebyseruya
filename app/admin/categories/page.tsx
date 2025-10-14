@@ -42,6 +42,7 @@ export default function AdminCategoriesPage() {
     display_order: '',
     is_active: true,
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -104,30 +105,27 @@ export default function AdminCategoriesPage() {
 
     try {
       const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-
+      let imageUrl = formData.image_url;
+      if (imageFile) {
+        const { uploadImageToCloudinary } = await import('@/lib/cloudinary');
+        imageUrl = await uploadImageToCloudinary(imageFile);
+      }
       const categoryData = {
         name: formData.name,
         slug,
         description: formData.description,
-        image_url: formData.image_url,
+        image_url: imageUrl,
         display_order: parseInt(formData.display_order) || 0,
         is_active: formData.is_active,
       };
-
-      if (editingCategory) {
-        const { error } = await supabase
-          .from('categories')
-          .update(categoryData)
-          .eq('id', editingCategory.id);
-
-        if (error) throw error;
-        toast({ title: 'Category updated successfully' });
-      } else {
-        const { error } = await supabase.from('categories').insert([categoryData]);
-        if (error) throw error;
-        toast({ title: 'Category created successfully' });
-      }
-
+      const method = editingCategory ? 'PUT' : 'POST';
+      const res = await fetch('/api/admin/categories', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingCategory ? { ...categoryData, id: editingCategory.id } : categoryData),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast({ title: editingCategory ? 'Category updated successfully' : 'Category created successfully' });
       setDialogOpen(false);
       resetForm();
       fetchCategories();
@@ -156,8 +154,12 @@ export default function AdminCategoriesPage() {
     if (!confirm('Are you sure you want to delete this category? This may affect products.')) return;
 
     try {
-      const { error } = await supabase.from('categories').delete().eq('id', id);
-      if (error) throw error;
+      const res = await fetch('/api/admin/categories', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error(await res.text());
       toast({ title: 'Category deleted successfully' });
       fetchCategories();
     } catch (error: any) {
@@ -285,8 +287,16 @@ export default function AdminCategoriesPage() {
                       onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                       placeholder="https://example.com/image.jpg"
                     />
+                    <div className="mt-2">
+                      <Label htmlFor="image_file">Or Upload Image</Label>
+                      <Input
+                        id="image_file"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                      />
+                    </div>
                   </div>
-
                   <div>
                     <Label htmlFor="display_order">Display Order</Label>
                     <Input
