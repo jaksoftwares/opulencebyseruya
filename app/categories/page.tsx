@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,6 +30,7 @@ interface Category {
   name: string;
   slug: string;
   description: string;
+  image_url?: string;
 }
 
 export default function CategoriesPage() {
@@ -78,8 +80,18 @@ export default function CategoriesPage() {
                   <Link key={category.id} href={`/categories/${category.slug}`}>
                     <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 h-full">
                       <CardContent className="p-8 text-center">
-                        <div className="w-20 h-20 mx-auto mb-6 bg-amber-50 rounded-full flex items-center justify-center group-hover:bg-amber-100 transition-colors">
-                          <Icon className="h-10 w-10 text-amber-600" />
+                        <div className="w-20 h-20 mx-auto mb-6 bg-amber-50 rounded-full flex items-center justify-center group-hover:bg-amber-100 transition-colors overflow-hidden">
+                          {category.image_url ? (
+                            <Image
+                              src={category.image_url}
+                              alt={category.name}
+                              width={80}
+                              height={80}
+                              className="object-cover rounded-full"
+                            />
+                          ) : (
+                            <Icon className="h-10 w-10 text-amber-600" />
+                          )}
                         </div>
                         <h3 className="font-serif font-semibold text-xl text-gray-900 mb-3 group-hover:text-amber-600 transition-colors">
                           {category.name}

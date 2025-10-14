@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ChefHat, Plane, Baby, Bath, Home, Bed, Heart, Package,
   Sparkles, UtensilsCrossed, Luggage, Gift
@@ -40,6 +41,7 @@ interface Category {
   name: string;
   slug: string;
   description: string;
+  image_url?: string;
 }
 
 export default function FeaturedCategories() {
@@ -124,12 +126,22 @@ export default function FeaturedCategories() {
                     ${isHovered ? 'shadow-xl -translate-y-1 sm:-translate-y-2 border-amber-200' : 'shadow-md hover:shadow-lg'}
                     flex flex-col items-center text-center`}
                   >
-                    {/* Icon */}
+                    {/* Image or Icon */}
                     <div
-                      className={`relative w-16 sm:w-20 h-16 sm:h-20 mb-3 sm:mb-4 rounded-2xl bg-gradient-to-br ${gradient}
-                      flex items-center justify-center transition-transform duration-500 ${isHovered ? 'scale-110 rotate-3' : 'group-hover:scale-105'} shadow-lg`}
+                      className={`relative w-28 sm:w-32 h-28 sm:h-32 mb-3 sm:mb-4 rounded-2xl bg-gradient-to-br ${gradient}
+                      flex items-center justify-center transition-transform duration-500 ${isHovered ? 'scale-110 rotate-3' : 'group-hover:scale-105'} shadow-lg overflow-hidden`}
                     >
-                      <Icon className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
+                      {category.image_url ? (
+                        <Image
+                          src={category.image_url}
+                          alt={category.name}
+                          width={128}
+                          height={128}
+                          className="object-cover rounded-2xl"
+                        />
+                      ) : (
+                        <Icon className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
+                      )}
                       <div
                         className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${gradient} opacity-0 blur-xl transition-opacity duration-500
                         ${isHovered ? 'opacity-40' : ''}`}
