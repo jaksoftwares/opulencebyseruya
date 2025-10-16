@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminNav from '@/components/admin/AdminNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, ShoppingCart, DollarSign, TrendingUp } from 'lucide-react';
+import { Package, ShoppingCart, DollarSign, TrendingUp, Truck, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
@@ -13,6 +13,8 @@ interface Stats {
   totalOrders: number;
   totalRevenue: number;
   pendingOrders: number;
+  totalSuppliers: number;
+  totalCategories: number;
 }
 
 export default function AdminDashboard() {
@@ -24,6 +26,8 @@ export default function AdminDashboard() {
     totalOrders: 0,
     totalRevenue: 0,
     pendingOrders: 0,
+    totalSuppliers: 0,
+    totalCategories: 0,
   });
 
   useEffect(() => {
@@ -38,23 +42,40 @@ export default function AdminDashboard() {
   }, [isAdmin, authLoading, router]);
 
   const fetchStats = async () => {
-    const [productsRes, ordersRes, revenueRes, pendingRes] = await Promise.all([
-      supabase.from('products').select('id', { count: 'exact' }),
-      supabase.from('orders').select('id', { count: 'exact' }),
-      supabase.from('orders').select('total'),
-      supabase.from('orders').select('id', { count: 'exact' }).eq('status', 'pending'),
-    ]);
+    try {
+      const [productsRes, ordersRes, revenueRes, pendingRes, suppliersRes, categoriesRes] = await Promise.all([
+        supabase.from('products').select('id', { count: 'exact' }),
+        supabase.from('orders').select('id', { count: 'exact' }),
+        supabase.from('orders').select('total'),
+        supabase.from('orders').select('id', { count: 'exact' }).eq('status', 'pending'),
+        supabase.from('suppliers').select('id', { count: 'exact' }),
+        supabase.from('categories').select('id', { count: 'exact' }),
+      ]);
 
-    const revenue = revenueRes.data?.reduce((sum: number, order: any) => sum + (order.total || 0), 0) || 0;
+      const revenue = revenueRes.data?.reduce((sum: number, order: any) => sum + (order.total || 0), 0) || 0;
 
-    setStats({
-      totalProducts: productsRes.count || 0,
-      totalOrders: ordersRes.count || 0,
-      totalRevenue: revenue,
-      pendingOrders: pendingRes.count || 0,
-    });
-
-    setLoading(false);
+      setStats({
+        totalProducts: productsRes.count || 0,
+        totalOrders: ordersRes.count || 0,
+        totalRevenue: revenue,
+        pendingOrders: pendingRes.count || 0,
+        totalSuppliers: suppliersRes.count || 0,
+        totalCategories: categoriesRes.count || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      // Set default values if queries fail
+      setStats({
+        totalProducts: 0,
+        totalOrders: 0,
+        totalRevenue: 0,
+        pendingOrders: 0,
+        totalSuppliers: 0,
+        totalCategories: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (authLoading || loading) {
@@ -90,6 +111,30 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
+                Total Suppliers
+              </CardTitle>
+              <Truck className="h-5 w-5 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.totalSuppliers}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Total Categories
+              </CardTitle>
+              <Users className="h-5 w-5 text-indigo-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.totalCategories}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">
                 Total Orders
               </CardTitle>
               <ShoppingCart className="h-5 w-5 text-blue-600" />
@@ -98,7 +143,9 @@ export default function AdminDashboard() {
               <div className="text-3xl font-bold">{stats.totalOrders}</div>
             </CardContent>
           </Card>
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
@@ -136,6 +183,14 @@ export default function AdminDashboard() {
                 <h3 className="font-semibold text-gray-900 mb-1">Manage Products</h3>
                 <p className="text-sm text-gray-600">Add, edit, or remove products from your catalog</p>
               </a>
+              <a href="/admin/suppliers" className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <h3 className="font-semibold text-gray-900 mb-1">Manage Suppliers</h3>
+                <p className="text-sm text-gray-600">Add, edit, or remove suppliers and their details</p>
+              </a>
+              <a href="/admin/categories" className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <h3 className="font-semibold text-gray-900 mb-1">Manage Categories</h3>
+                <p className="text-sm text-gray-600">Organize products into categories</p>
+              </a>
               <a href="/admin/orders" className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                 <h3 className="font-semibold text-gray-900 mb-1">View Orders</h3>
                 <p className="text-sm text-gray-600">Process and manage customer orders</p>
@@ -155,6 +210,14 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-gray-600">Active Products</span>
                 <span className="font-medium">{stats.totalProducts}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-gray-600">Active Suppliers</span>
+                <span className="font-medium">{stats.totalSuppliers}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-gray-600">Categories</span>
+                <span className="font-medium">{stats.totalCategories}</span>
               </div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-gray-600">Status</span>

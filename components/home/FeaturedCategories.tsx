@@ -122,49 +122,53 @@ export default function FeaturedCategories() {
                   className="group"
                 >
                   <div
-                    className={`relative bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 transition-all duration-500
+                    className={`relative bg-white rounded-2xl overflow-hidden border border-gray-100 transition-all duration-500
                     ${isHovered ? 'shadow-xl -translate-y-1 sm:-translate-y-2 border-amber-200' : 'shadow-md hover:shadow-lg'}
-                    flex flex-col items-center text-center`}
+                    flex flex-col`}
                   >
-                    {/* Image or Icon */}
-                    <div
-                      className={`relative w-28 sm:w-32 h-28 sm:h-32 mb-3 sm:mb-4 rounded-2xl bg-gradient-to-br ${gradient}
-                      flex items-center justify-center transition-transform duration-500 ${isHovered ? 'scale-110 rotate-3' : 'group-hover:scale-105'} shadow-lg overflow-hidden`}
-                    >
-                      {category.image_url ? (
+                    {/* Image Section - Top of Card */}
+                    {category.image_url ? (
+                      <div className="relative w-full h-32 sm:h-36 overflow-hidden">
                         <Image
                           src={category.image_url}
                           alt={category.name}
-                          width={128}
-                          height={128}
-                          className="object-cover rounded-2xl"
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-110"
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                         />
-                      ) : (
+                        {/* Optional overlay for better text contrast */}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+                      </div>
+                    ) : (
+                      <div className={`w-full h-32 sm:h-36 bg-gradient-to-br ${gradient} flex items-center justify-center`}>
                         <Icon className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
-                      )}
+                        <div
+                          className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 blur-xl transition-opacity duration-500
+                          ${isHovered ? 'opacity-40' : ''}`}
+                        />
+                      </div>
+                    )}
+
+                    {/* Content Section */}
+                    <div className="p-4 sm:p-6 text-center flex flex-col items-center">
+                      {/* Text */}
+                      <h3
+                        className={`font-semibold text-base sm:text-lg mb-1 sm:mb-2 transition-colors duration-300
+                        ${isHovered ? 'text-amber-600' : 'text-gray-900 group-hover:text-amber-600'}`}
+                      >
+                        {category.name}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-gray-500 line-clamp-2">
+                        {category.description}
+                      </p>
+
+                      {/* Hover CTA */}
                       <div
-                        className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${gradient} opacity-0 blur-xl transition-opacity duration-500
-                        ${isHovered ? 'opacity-40' : ''}`}
-                      />
-                    </div>
-
-                    {/* Text */}
-                    <h3
-                      className={`font-semibold text-base sm:text-lg mb-1 sm:mb-2 transition-colors duration-300
-                      ${isHovered ? 'text-amber-600' : 'text-gray-900 group-hover:text-amber-600'}`}
-                    >
-                      {category.name}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-gray-500 line-clamp-2">
-                      {category.description}
-                    </p>
-
-                    {/* Hover CTA */}
-                    <div
-                      className={`absolute bottom-3 left-1/2 transform -translate-x-1/2 text-[10px] sm:text-xs font-semibold text-amber-600
-                      transition-all duration-300 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-                    >
-                      Explore →
+                        className={`absolute bottom-3 left-1/2 transform -translate-x-1/2 text-[10px] sm:text-xs font-semibold text-amber-600
+                        transition-all duration-300 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+                      >
+                        Explore →
+                      </div>
                     </div>
                   </div>
                 </Link>

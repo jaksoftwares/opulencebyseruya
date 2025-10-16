@@ -78,27 +78,36 @@ export default function CategoriesPage() {
                 const Icon = categoryIcons[category.slug] || Package;
                 return (
                   <Link key={category.id} href={`/categories/${category.slug}`}>
-                    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 h-full">
-                      <CardContent className="p-8 text-center">
-                        <div className="w-20 h-20 mx-auto mb-6 bg-amber-50 rounded-full flex items-center justify-center group-hover:bg-amber-100 transition-colors overflow-hidden">
-                          {category.image_url ? (
+                    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 h-full overflow-hidden">
+                      <CardContent className="p-0 text-center">
+                        {/* Image Section - Top of Card */}
+                        {category.image_url ? (
+                          <div className="relative w-full h-48 overflow-hidden">
                             <Image
                               src={category.image_url}
                               alt={category.name}
-                              width={80}
-                              height={80}
-                              className="object-cover rounded-full"
+                              fill
+                              className="object-cover transition-transform duration-500 group-hover:scale-110"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             />
-                          ) : (
-                            <Icon className="h-10 w-10 text-amber-600" />
-                          )}
+                            {/* Optional overlay for better text contrast */}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+                          </div>
+                        ) : (
+                          <div className="w-full h-48 bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                            <Icon className="h-16 w-16 text-white" />
+                          </div>
+                        )}
+
+                        {/* Content Section */}
+                        <div className="p-6">
+                          <h3 className="font-serif font-semibold text-xl text-gray-900 mb-3 group-hover:text-amber-600 transition-colors">
+                            {category.name}
+                          </h3>
+                          <p className="text-gray-600 leading-relaxed">
+                            {category.description}
+                          </p>
                         </div>
-                        <h3 className="font-serif font-semibold text-xl text-gray-900 mb-3 group-hover:text-amber-600 transition-colors">
-                          {category.name}
-                        </h3>
-                        <p className="text-gray-600 leading-relaxed">
-                          {category.description}
-                        </p>
                       </CardContent>
                     </Card>
                   </Link>

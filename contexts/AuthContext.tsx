@@ -113,37 +113,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Auto-refresh session before expiry
   useEffect(() => {
     let refreshTimer: NodeJS.Timeout;
+    let refreshInterval: NodeJS.Timeout;
 
     const setupSessionRefresh = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.expires_at) {
-        const expiresAt = session.expires_at * 1000;
-        const now = Date.now();
-        const timeUntilExpiry = expiresAt - now;
-        
-        // Refresh 5 minutes before expiry
-        const refreshTime = Math.max(timeUntilExpiry - 5 * 60 * 1000, 60 * 1000);
-        
-        if (refreshTime > 0) {
-          refreshTimer = setTimeout(async () => {
-            console.log('Auto-refreshing session...');
-            const refreshed = await refreshSession();
-            if (refreshed) {
-              setupSessionRefresh(); // Setup next refresh
-            }
-          }, refreshTime);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.expires_at) {
+          const expiresAt = session.expires_at * 1000;
+          const now = Date.now();
+          const timeUntilExpiry = expiresAt - now;
+
+          // Refresh 5 minutes before expiry
+          const refreshTime = Math.max(timeUntilExpiry - 5 * 60 * 1000, 60 * 1000);
+
+          if (refreshTime > 0) {
+            refreshTimer = setTimeout(async () => {
+              console.log('Auto-refreshing session...');
+              const refreshed = await refreshSession();
+              if (refreshed) {
+                setupSessionRefresh(); // Setup next refresh
+              }
+            }, refreshTime);
+          }
         }
+      } catch (error) {
+        console.error('Error setting up session refresh:', error);
       }
+    };
+
+    // Also set up periodic session validation every 10 minutes
+    const setupPeriodicCheck = () => {
+      refreshInterval = setInterval(async () => {
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (error || !session) {
+            console.log('Periodic session check failed, signing out');
+            await supabase.auth.signOut();
+            setUser(null);
+            setCustomer(null);
+            return;
+          }
+
+          // Validate session is still valid
+          if (session.expires_at && session.expires_at * 1000 < Date.now()) {
+            console.log('Session expired during periodic check, signing out');
+            await supabase.auth.signOut();
+            setUser(null);
+            setCustomer(null);
+            return;
+          }
+
+          console.log('Periodic session check passed');
+        } catch (error) {
+          console.error('Error during periodic session check:', error);
+        }
+      }, 10 * 60 * 1000); // Check every 10 minutes
     };
 
     if (user) {
       setupSessionRefresh();
+      setupPeriodicCheck();
     }
 
     return () => {
       if (refreshTimer) {
         clearTimeout(refreshTimer);
+      }
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
       }
     };
   }, [user]);
@@ -223,9 +261,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
-        
+
         try {
           if (event === 'SIGNED_OUT' || !session?.user) {
+            console.log('User signed out or no session');
             setUser(null);
             setCustomer(null);
             setLoading(false);
@@ -233,13 +272,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
 
           if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            console.log('User signed in or token refreshed');
+
+            // Validate session is not expired
+            if (session.expires_at && session.expires_at * 1000 < Date.now()) {
+              console.log('Session expired, signing out');
+              await supabase.auth.signOut();
+              setUser(null);
+              setCustomer(null);
+              setLoading(false);
+              return;
+            }
+
             setUser(session.user);
             const customerData = await fetchCustomer(session.user.id, session.user.email, session.user.user_metadata);
-            
+
             if (customerData) {
               setCustomer(customerData);
+              console.log('Customer data loaded successfully');
             } else {
-              console.log('Failed to fetch customer data after auth change');
+              console.log('Failed to fetch customer data after auth change, signing out');
               await supabase.auth.signOut();
               setUser(null);
               setCustomer(null);
@@ -247,6 +299,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } catch (error) {
           console.error('Error handling auth state change:', error);
+          // On error, sign out to be safe
+          try {
+            await supabase.auth.signOut();
+          } catch (signOutError) {
+            console.error('Error signing out after auth error:', signOutError);
+          }
           setUser(null);
           setCustomer(null);
         } finally {
