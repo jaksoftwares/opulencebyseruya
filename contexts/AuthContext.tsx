@@ -191,10 +191,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const getInitialSession = async () => {
       try {
         setLoading(true);
-        
+
         // Get current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError) {
           console.error('Session error:', sessionError);
           setUser(null);
@@ -215,24 +215,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
           }
 
-          // Validate the session with the server by making an authenticated request
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-          
-          if (userError || !user) {
-            console.log('Session invalid, signing out:', userError?.message);
-            await supabase.auth.signOut();
-            setUser(null);
-            setCustomer(null);
-            setLoading(false);
-            return;
-          }
-
           // Set user first
-          setUser(user);
-          
+          setUser(session.user);
+
           // Fetch customer data
-          const customerData = await fetchCustomer(user.id, user.email, user.user_metadata);
-          
+          const customerData = await fetchCustomer(session.user.id, session.user.email, session.user.user_metadata);
+
           // Only set customer if data was successfully fetched
           if (customerData) {
             setCustomer(customerData);
