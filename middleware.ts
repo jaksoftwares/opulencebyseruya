@@ -7,13 +7,16 @@ export async function middleware(req: NextRequest) {
   // Add cache control headers for authentication-related pages
   const authPages = ['/login', '/signup', '/profile', '/admin']
   const isAuthPage = authPages.some(page => req.nextUrl.pathname.startsWith(page))
-  
+
   if (isAuthPage) {
-    // Prevent caching of authentication pages
+    // Prevent caching of authentication pages and admin routes
     res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private')
     res.headers.set('Pragma', 'no-cache')
     res.headers.set('Expires', '0')
     res.headers.set('X-Robots-Tag', 'noindex, nofollow')
+  } else {
+    // For non-auth pages, still prevent aggressive caching that might interfere with auth state
+    res.headers.set('Cache-Control', 'no-cache, private')
   }
 
   // Add security headers for all pages
