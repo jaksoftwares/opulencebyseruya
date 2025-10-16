@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminNav from '@/components/admin/AdminNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,27 +41,41 @@ export default function AdminDashboard() {
     }
   }, [isAdmin, authLoading, router]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
-      const [productsRes, ordersRes, revenueRes, pendingRes, suppliersRes, categoriesRes] = await Promise.all([
-        supabase.from('products').select('id', { count: 'exact' }),
-        supabase.from('orders').select('id', { count: 'exact' }),
+      console.log('Fetching dashboard stats...');
+
+      // Fetch all stats in parallel
+      const [productsRes, ordersRes, revenueRes, pendingRes, suppliersTotalRes, suppliersActiveRes, categoriesRes] = await Promise.all([
+        supabase.from('products').select('id', { count: 'exact', head: true }),
+        supabase.from('orders').select('id', { count: 'exact', head: true }),
         supabase.from('orders').select('total'),
-        supabase.from('orders').select('id', { count: 'exact' }).eq('status', 'pending'),
-        supabase.from('suppliers').select('id', { count: 'exact' }),
-        supabase.from('categories').select('id', { count: 'exact' }),
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('suppliers').select('id', { count: 'exact', head: true }),
+        supabase.from('suppliers').select('id', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('categories').select('id', { count: 'exact', head: true }),
       ]);
+
+      console.log('Stats responses:', {
+        products: productsRes,
+        suppliersTotal: suppliersTotalRes,
+        suppliersActive: suppliersActiveRes,
+        categories: categoriesRes
+      });
 
       const revenue = revenueRes.data?.reduce((sum: number, order: any) => sum + (order.total || 0), 0) || 0;
 
-      setStats({
+      const newStats = {
         totalProducts: productsRes.count || 0,
         totalOrders: ordersRes.count || 0,
         totalRevenue: revenue,
         pendingOrders: pendingRes.count || 0,
-        totalSuppliers: suppliersRes.count || 0,
+        totalSuppliers: suppliersTotalRes.count || 0,
         totalCategories: categoriesRes.count || 0,
-      });
+      };
+
+      console.log('Setting stats:', newStats);
+      setStats(newStats);
     } catch (error) {
       console.error('Error fetching stats:', error);
       // Set default values if queries fail
@@ -76,14 +90,33 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  if (authLoading || loading) {
+
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AdminNav />
         <div className="container mx-auto px-4 py-8">
           <p className="text-center text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return null; // This will redirect in useEffect
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AdminNav />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading dashboard data...</p>
+          </div>
         </div>
       </div>
     );
