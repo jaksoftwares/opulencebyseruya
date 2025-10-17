@@ -502,13 +502,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
+      console.log('Starting sign out process...');
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase sign out error:', error);
+        throw error;
+      }
+      console.log('Supabase sign out successful');
+
+      // Force clear local state immediately
+      setUser(null);
+      setCustomer(null);
 
       toast({
         title: 'Signed out',
         description: 'You have been signed out successfully.',
       });
+      console.log('Sign out completed successfully');
     } catch (error) {
       console.error('Sign out error:', error);
       toast({

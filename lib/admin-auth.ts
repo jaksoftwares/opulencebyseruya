@@ -10,6 +10,22 @@ export const signInAdmin = async (email: string, password: string) => {
 
   if (error) throw error;
 
+  // Check if user is the specific sales user
+  if (data.user.id === 'de819e4d-efe6-4633-8498-0a1532efd965') {
+    return {
+      user: data.user,
+      customer: {
+        id: data.user.id,
+        email: data.user.email || '',
+        full_name: 'Pauline Seruya',
+        phone: '+254 742 617 839',
+        role: 'admin',
+        is_active: true,
+        created_at: data.user.created_at,
+      }
+    };
+  }
+
   const { data: customerData } = await supabase
     .from('customers')
     .select('*')
@@ -34,6 +50,22 @@ export const getCurrentAdmin = async () => {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return null;
+
+  // Check if user is the specific sales user
+  if (user.id === 'de819e4d-efe6-4633-8498-0a1532efd965') {
+    return {
+      user,
+      customer: {
+        id: user.id,
+        email: user.email || '',
+        full_name: 'Pauline Seruya',
+        phone: '+254 742 617 839',
+        role: 'admin',
+        is_active: true,
+        created_at: user.created_at,
+      }
+    };
+  }
 
   const { data: customerData } = await supabase
     .from('customers')

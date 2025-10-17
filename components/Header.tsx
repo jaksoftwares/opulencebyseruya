@@ -133,7 +133,10 @@ export default function Header() {
                     </>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={signOut}>
+                  <DropdownMenuItem onClick={() => {
+                    console.log('Sign out clicked');
+                    signOut();
+                  }}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign out
                   </DropdownMenuItem>
@@ -225,6 +228,7 @@ export default function Header() {
                         )}
                         <Button
                           onClick={() => {
+                            console.log('Mobile sign out clicked');
                             signOut();
                             setIsOpen(false);
                           }}

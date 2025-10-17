@@ -19,7 +19,7 @@ export default function SignupPage() {
     confirmPassword: '',
     fullName: '',
     phone: '',
-    isAdmin: false,
+    // isAdmin: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -51,8 +51,8 @@ export default function SignupPage() {
         formData.email,
         formData.password,
         formData.fullName,
-        formData.phone,
-        formData.isAdmin
+        formData.phone
+        // formData.isAdmin
       );
       router.push('/login');
     } catch (error) {
@@ -193,7 +193,7 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
+              {/* <div className="flex items-center space-x-2">
                 <Checkbox
                   id="isAdmin"
                   checked={formData.isAdmin}
@@ -202,7 +202,7 @@ export default function SignupPage() {
                 <Label htmlFor="isAdmin" className="text-sm">
                   Register as administrator
                 </Label>
-              </div>
+              </div> */}
 
               <div>
                 <Button
