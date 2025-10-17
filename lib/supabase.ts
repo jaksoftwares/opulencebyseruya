@@ -105,6 +105,17 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['order_items']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['order_items']['Insert']>;
       };
+      newsletter_subscriptions: {
+        Row: {
+          id: string;
+          email: string;
+          is_active: boolean;
+          subscribed_at: string;
+          unsubscribed_at: string | null;
+        };
+        Insert: Omit<Database['public']['Tables']['newsletter_subscriptions']['Row'], 'id' | 'subscribed_at'>;
+        Update: Partial<Database['public']['Tables']['newsletter_subscriptions']['Insert']>;
+      };
     };
   };
 };

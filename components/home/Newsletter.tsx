@@ -11,11 +11,32 @@ export default function Newsletter() {
   const handleSubmit = async () => {
     if (!email) return;
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    setIsSubmitted(true);
-    setEmail('');
-    setTimeout(() => setIsSubmitted(false), 3000);
+
+    try {
+      const response = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to subscribe');
+      }
+
+      console.log('Subscription successful:', data.message);
+      setIsSubmitted(true);
+      setEmail('');
+      setTimeout(() => setIsSubmitted(false), 3000);
+    } catch (error) {
+      console.error('Subscription error:', error);
+      alert('Failed to subscribe. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const benefits = [
