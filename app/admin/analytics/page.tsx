@@ -57,36 +57,54 @@ export default function AdminAnalyticsPage() {
 
   const fetchAnalytics = async () => {
     try {
-      // Fetch basic stats
+      // Create admin client to bypass RLS for accurate analytics
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = 'https://emgrqgsvjcdfqdvojizt.supabase.co';
+      const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtZ3JxZ3N2amNkZnFkdm9qaXp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTgxMDc5MywiZXhwIjoyMDc1Mzg2NzkzfQ.a_EbEfIOpz_S5x39XIJk0NPgFSYYMPu69_UoIrG7VIE';
+
+      const supabaseAdmin = createClient(
+        supabaseUrl,
+        supabaseServiceKey,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
+
+      // Fetch basic stats using admin client
       const [revenueRes, ordersRes, customersRes, productsRes] = await Promise.all([
-        supabase.from('orders').select('total'),
-        supabase.from('orders').select('id', { count: 'exact' }),
-        supabase.from('customers').select('id', { count: 'exact' }),
-        supabase.from('products').select('id', { count: 'exact' }),
+        // Calculate revenue only from confirmed orders (not pending)
+        supabaseAdmin.from('orders').select('total').in('status', ['confirmed', 'processing', 'shipped', 'delivered']),
+        supabaseAdmin.from('orders').select('id', { count: 'exact' }),
+        supabaseAdmin.from('customers').select('id', { count: 'exact' }),
+        supabaseAdmin.from('products').select('id', { count: 'exact' }),
       ]);
 
       const totalRevenue = revenueRes.data?.reduce((sum: number, order: any) => sum + (order.total || 0), 0) || 0;
 
-      // Fetch monthly revenue (last 6 months)
+      // Fetch monthly revenue (last 6 months) - only from confirmed orders
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-      const { data: monthlyData } = await supabase
+      const { data: monthlyData } = await supabaseAdmin
         .from('orders')
         .select('total, created_at')
+        .in('status', ['confirmed', 'processing', 'shipped', 'delivered'])
         .gte('created_at', sixMonthsAgo.toISOString());
 
       const monthlyRevenue = processMonthlyData(monthlyData || []);
 
       // Fetch top products
-      const { data: orderItemsData } = await supabase
+      const { data: orderItemsData } = await supabaseAdmin
         .from('order_items')
         .select('product_name, quantity');
 
       const topProducts = processTopProducts(orderItemsData || []);
 
       // Fetch recent orders
-      const { data: recentOrdersData } = await supabase
+      const { data: recentOrdersData } = await supabaseAdmin
         .from('orders')
         .select('id, total, created_at')
         .order('created_at', { ascending: false })

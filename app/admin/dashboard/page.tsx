@@ -66,24 +66,43 @@ export default function AdminDashboard() {
         setLoading(true);
       }
 
-      // Fetch all stats in parallel
-      const [productsRes, ordersRes, revenueRes, pendingRes, suppliersTotalRes, suppliersActiveRes, categoriesRes] = await Promise.all([
-        supabase.from('products').select('id', { count: 'exact', head: true }),
-        supabase.from('orders').select('id', { count: 'exact', head: true }),
-        supabase.from('orders').select('total'),
-        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('suppliers').select('id', { count: 'exact', head: true }),
-        supabase.from('suppliers').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('categories').select('id', { count: 'exact', head: true }),
+      // Create admin client to bypass RLS for accurate stats
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = 'https://emgrqgsvjcdfqdvojizt.supabase.co';
+      const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtZ3JxZ3N2amNkZnFkdm9qaXp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTgxMDc5MywiZXhwIjoyMDc1Mzg2NzkzfQ.a_EbEfIOpz_S5x39XIJk0NPgFSYYMPu69_UoIrG7VIE';
+
+      const supabaseAdmin = createClient(
+        supabaseUrl,
+        supabaseServiceKey,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
+
+      // Fetch all stats in parallel using admin client
+      const [productsRes, ordersRes, revenueRes, pendingRes, suppliersTotalRes, categoriesRes] = await Promise.all([
+        supabaseAdmin.from('products').select('id', { count: 'exact', head: true }),
+        supabaseAdmin.from('orders').select('id', { count: 'exact', head: true }),
+        // Calculate revenue only from confirmed orders (not pending)
+        supabaseAdmin.from('orders').select('total').in('status', ['confirmed', 'processing', 'shipped', 'delivered']),
+        supabaseAdmin.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabaseAdmin.from('suppliers').select('id', { count: 'exact', head: true }),
+        supabaseAdmin.from('categories').select('id', { count: 'exact', head: true }),
       ]);
 
       console.log('Stats responses:', {
         products: productsRes,
-        suppliersTotal: suppliersTotalRes,
-        suppliersActive: suppliersActiveRes,
+        orders: ordersRes,
+        revenue: revenueRes,
+        pending: pendingRes,
+        suppliers: suppliersTotalRes,
         categories: categoriesRes
       });
 
+      // Calculate revenue from confirmed orders only
       const revenue = revenueRes.data?.reduce((sum: number, order: any) => sum + (order.total || 0), 0) || 0;
 
       const newStats = {

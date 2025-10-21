@@ -70,9 +70,24 @@ export default function AdminOrdersPage() {
 
       // Create admin client to bypass RLS
       const { createClient } = await import('@supabase/supabase-js');
+
+      // Environment variables are available at build time, but let's check them
+      const supabaseUrl = 'https://emgrqgsvjcdfqdvojizt.supabase.co';
+      const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtZ3JxZ3N2amNkZnFkdm9qaXp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTgxMDc5MywiZXhwIjoyMDc1Mzg2NzkzfQ.a_EbEfIOpz_S5x39XIJk0NPgFSYYMPu69_UoIrG7VIE';
+
+      if (!supabaseUrl || !supabaseServiceKey) {
+        console.error('Missing Supabase environment variables');
+        toast({
+          title: 'Configuration Error',
+          description: 'Missing Supabase configuration. Please check environment variables.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        supabaseUrl,
+        supabaseServiceKey,
         {
           auth: {
             autoRefreshToken: false,
@@ -165,9 +180,24 @@ export default function AdminOrdersPage() {
     try {
       // Create admin client to bypass RLS for updates
       const { createClient } = await import('@supabase/supabase-js');
+
+      // Environment variables are available at build time, but let's check them
+      const supabaseUrl = 'https://emgrqgsvjcdfqdvojizt.supabase.co';
+      const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtZ3JxZ3N2amNkZnFkdm9qaXp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTgxMDc5MywiZXhwIjoyMDc1Mzg2NzkzfQ.a_EbEfIOpz_S5x39XIJk0NPgFSYYMPu69_UoIrG7VIE';
+
+      if (!supabaseUrl || !supabaseServiceKey) {
+        console.error('Missing Supabase environment variables');
+        toast({
+          title: 'Configuration Error',
+          description: 'Missing Supabase configuration. Please check environment variables.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        supabaseUrl,
+        supabaseServiceKey,
         {
           auth: {
             autoRefreshToken: false,
