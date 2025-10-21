@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminNav from '@/components/admin/AdminNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, ShoppingCart, DollarSign, TrendingUp, Truck, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Package, ShoppingCart, DollarSign, TrendingUp, Truck, Users, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
@@ -21,6 +22,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const { isAdmin, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<Stats>({
     totalProducts: 0,
     totalOrders: 0,
@@ -29,6 +31,20 @@ export default function AdminDashboard() {
     totalSuppliers: 0,
     totalCategories: 0,
   });
+
+  // Refetch stats when navigating back to dashboard
+  useEffect(() => {
+    if (isAdmin && !authLoading && !loading) {
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          fetchStats();
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }
+  }, [isAdmin, authLoading, loading]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -41,9 +57,14 @@ export default function AdminDashboard() {
     }
   }, [isAdmin, authLoading, router]);
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (isRefresh = false) => {
     try {
       console.log('Fetching dashboard stats...');
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
       // Fetch all stats in parallel
       const [productsRes, ordersRes, revenueRes, pendingRes, suppliersTotalRes, suppliersActiveRes, categoriesRes] = await Promise.all([
@@ -89,6 +110,7 @@ export default function AdminDashboard() {
       });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -122,11 +144,26 @@ export default function AdminDashboard() {
     );
   }
 
+  const handleRefresh = () => {
+    fetchStats(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminNav />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="font-serif text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="font-serif text-3xl font-bold text-gray-900">Dashboard</h1>
+          <Button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>

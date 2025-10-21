@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone } from 'lucide-react';
+import { Phone, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,7 @@ export default function AdminCustomersPage() {
   const { isAdmin, customer } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
 
   useEffect(() => {
@@ -37,8 +38,13 @@ export default function AdminCustomersPage() {
     fetchCustomers();
   }, [isAdmin, customer, router]);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (isRefresh = false) => {
     try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       const response = await fetch('/api/admin/users');
       if (!response.ok) throw new Error('Failed to fetch users');
       const data = await response.json();
@@ -51,6 +57,7 @@ export default function AdminCustomersPage() {
       });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -72,11 +79,18 @@ export default function AdminCustomersPage() {
       <div className="min-h-screen bg-gray-50">
         <AdminNav />
         <div className="container mx-auto px-4 py-8">
-          <p className="text-center text-gray-600">Loading...</p>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading customers...</p>
+          </div>
         </div>
       </div>
     );
   }
+
+  const handleRefresh = () => {
+    fetchCustomers(true);
+  };
 
   if (!isAdmin) {
     return (
@@ -103,8 +117,20 @@ export default function AdminCustomersPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="font-serif text-3xl font-bold text-gray-900">Customers</h1>
-          <div className="text-sm text-gray-600">
-            {customers.length} total customers
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600">
+              {customers.length} total customers
+            </div>
+            <Button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
           </div>
         </div>
 

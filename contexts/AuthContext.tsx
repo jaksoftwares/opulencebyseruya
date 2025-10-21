@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -34,7 +34,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastActivity, setLastActivity] = useState<number>(Date.now());
   const { toast } = useToast();
+
+  // Inactivity timeout (30 minutes)
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+  // Activity tracking functions
+  const updateActivity = useCallback(() => {
+    setLastActivity(Date.now());
+  }, []);
+
+  const checkInactivity = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastActivity > INACTIVITY_TIMEOUT && user) {
+      console.log('User inactive for too long, signing out');
+      await signOut();
+    }
+  }, [lastActivity, user]);
+
+  // Activity event listeners
+  useEffect(() => {
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+
+    const handleActivity = () => updateActivity();
+
+    events.forEach(event => {
+      document.addEventListener(event, handleActivity, true);
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity, true);
+      });
+    };
+  }, [updateActivity]);
+
+  // Inactivity check interval
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(checkInactivity, 60 * 1000); // Check every minute
+    return () => clearInterval(interval);
+  }, [checkInactivity, user]);
 
   const fetchCustomer = async (userId: string, userEmail?: string, userMetadata?: any, retryCount = 0): Promise<Customer | null> => {
     if (!userEmail) {
@@ -192,6 +234,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         setLoading(true);
 
+        // Check localStorage for persisted auth state
+        const persistedAuth = localStorage.getItem('opulence_auth');
+        let persistedData = null;
+
+        if (persistedAuth) {
+          try {
+            persistedData = JSON.parse(persistedAuth);
+            // Check if persisted data is still valid (not expired - 7 days)
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            if (persistedData.expiresAt && persistedData.expiresAt < Date.now()) {
+              localStorage.removeItem('opulence_auth');
+              persistedData = null;
+            }
+          } catch (error) {
+            console.error('Error parsing persisted auth:', error);
+            localStorage.removeItem('opulence_auth');
+          }
+        }
+
         // Get current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
@@ -224,12 +285,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Only set customer if data was successfully fetched
           if (customerData) {
             setCustomer(customerData);
+            // Persist auth state for 7 days
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            localStorage.setItem('opulence_auth', JSON.stringify({
+              user: session.user,
+              customer: customerData,
+              expiresAt: Date.now() + sevenDaysMs,
+            }));
           } else {
             console.log('Failed to fetch customer data, signing out');
             await supabase.auth.signOut();
             setUser(null);
             setCustomer(null);
           }
+        } else if (persistedData) {
+          // Use persisted data if no active session but we have persisted data
+          console.log('Using persisted auth data');
+          setUser(persistedData.user);
+          setCustomer(persistedData.customer);
         } else {
           setUser(null);
           setCustomer(null);
@@ -255,6 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log('User signed out or no session');
             setUser(null);
             setCustomer(null);
+            localStorage.removeItem('opulence_auth');
             setLoading(false);
             return;
           }
@@ -268,6 +342,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               await supabase.auth.signOut();
               setUser(null);
               setCustomer(null);
+              localStorage.removeItem('opulence_auth');
               setLoading(false);
               return;
             }
@@ -277,12 +352,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (customerData) {
               setCustomer(customerData);
+              // Persist auth state for 7 days
+              const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+              localStorage.setItem('opulence_auth', JSON.stringify({
+                user: session.user,
+                customer: customerData,
+                expiresAt: Date.now() + sevenDaysMs,
+              }));
               console.log('Customer data loaded successfully');
             } else {
               console.log('Failed to fetch customer data after auth change, signing out');
               await supabase.auth.signOut();
               setUser(null);
               setCustomer(null);
+              localStorage.removeItem('opulence_auth');
             }
           }
         } catch (error) {
@@ -513,6 +596,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Force clear local state immediately
       setUser(null);
       setCustomer(null);
+      localStorage.removeItem('opulence_auth');
 
       toast({
         title: 'Signed out',

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Eye, X, Upload, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, X, Upload, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -54,6 +54,7 @@ export default function AdminProductsPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -95,8 +96,13 @@ export default function AdminProductsPage() {
     }
   }, [isAdmin, authLoading, router]);
 
-  const fetchData = async () => {
+  const fetchData = async (isRefresh = false) => {
     try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       const [productsRes, categoriesRes] = await Promise.all([
         supabase
           .from('products')
@@ -130,6 +136,7 @@ export default function AdminProductsPage() {
       });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -332,11 +339,18 @@ export default function AdminProductsPage() {
       <div className="min-h-screen bg-gray-50">
         <AdminNav />
         <div className="container mx-auto px-4 py-8">
-          <p className="text-center text-gray-600">Loading...</p>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading products...</p>
+          </div>
         </div>
       </div>
     );
   }
+
+  const handleRefresh = () => {
+    fetchData(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
