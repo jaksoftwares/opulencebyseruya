@@ -489,7 +489,7 @@ export default function ProductDetailPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Free Delivery</h3>
-                    <p className="text-sm text-gray-600">On orders above KES 5,000 within Nairobi</p>
+                    <p className="text-sm text-gray-600">On orders above KES 3,000 within Nairobi</p>
                   </div>
                 </div>
 
@@ -591,15 +591,15 @@ export default function ProductDetailPage() {
                     <ul className="space-y-3 text-gray-700">
                       <li className="flex items-start gap-3">
                         <MapPin className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <span>Free delivery within Nairobi for orders above KES 5,000</span>
+                        <span>Same-day delivery for clients within Nairobi (orders confirmed before 2 PM)</span>
                       </li>
                       <li className="flex items-start gap-3">
                         <Clock className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <span>Standard delivery: 2-5 business days</span>
+                        <span>24-hour delivery for orders outside Nairobi</span>
                       </li>
                       <li className="flex items-start gap-3">
                         <Package className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <span>Express delivery available for additional charges</span>
+                        <span>Free delivery within Nairobi for orders above KES 5,000</span>
                       </li>
                     </ul>
                   </div>
@@ -609,22 +609,35 @@ export default function ProductDetailPage() {
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                       <RefreshCw className="h-6 w-6 text-amber-500" />
-                      Return Policy
+                      Returns & Exchanges
                     </h3>
-                    <ul className="space-y-3 text-gray-700">
-                      <li className="flex items-start gap-3">
-                        <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span>30-day return policy for defective or damaged items</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span>Items must be in original packaging with tags attached</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span>Full refund or replacement available for eligible returns</span>
-                      </li>
-                    </ul>
+                    <div className="space-y-4">
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-green-900 mb-2">Eligible Items</h4>
+                        <ul className="text-green-800 space-y-1 text-sm">
+                          <li>• Technical defects or damage caused under our care</li>
+                          <li>• Wrong item delivered</li>
+                          <li>• Items damaged during shipping</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-red-900 mb-2">Not Eligible</h4>
+                        <ul className="text-red-800 space-y-1 text-sm">
+                          <li>• Change of mind or buyer&spos;s remorse</li>
+                          <li>• Wrong size/color selection</li>
+                          <li>• Personal preference</li>
+                          <li>• Used or altered items</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-blue-900 mb-2">Process</h4>
+                        <p className="text-blue-800 text-sm">
+                          Report issues within 48 hours. We may offer replacement, exchange, or store credit depending on stock availability.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </TabsContent>
