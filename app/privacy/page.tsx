@@ -235,7 +235,7 @@ export default function PrivacyPage() {
 
             <Card className="mb-8">
               <CardHeader>
-                <CardTitle>Children's Privacy</CardTitle>
+                <CardTitle>Children&apos;s Privacy</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-700">
@@ -253,7 +253,7 @@ export default function PrivacyPage() {
               <CardContent>
                 <p className="text-gray-700">
                   We may update this privacy policy from time to time. We will notify you of any material
-                  changes by posting the new policy on this page and updating the "Last updated" date.
+                  changes by posting the new policy on this page and updating the &apos;Last updated&apos; date.
                   Your continued use of our services after such changes constitutes acceptance of the updated policy.
                 </p>
               </CardContent>

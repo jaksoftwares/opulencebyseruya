@@ -73,7 +73,7 @@ export default function ReturnsPage() {
                     <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
                     <div>
                       <p className="font-medium">Change of Mind</p>
-                      <p className="text-sm text-gray-600">Personal preference or buyer's remorse</p>
+                      <p className="text-sm text-gray-600">Personal preference or buyer&apos;s remorse</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">

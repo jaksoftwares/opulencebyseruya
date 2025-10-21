@@ -50,7 +50,7 @@ export default function TermsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-gray-700">
-                    Opulence by Seruya ("we," "our," or "us") is a registered Kenyan business specializing in
+                    Opulence by Seruya  is a registered Kenyan business specializing in
                     premium household and lifestyle items. Our website provides an online shopping platform
                     for customers within Kenya and the East African region.
                   </p>
