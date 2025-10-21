@@ -116,7 +116,7 @@ export default function Header() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/orders">
+                    <Link href="/profile#orders">
                       <ShoppingCart className="mr-2 h-4 w-4" />
                       My Orders
                     </Link>
@@ -207,7 +207,7 @@ export default function Header() {
                           Profile
                         </Link>
                         <Link
-                          href="/orders"
+                          href="/profile#orders"
                           onClick={() => setIsOpen(false)}
                           className="block text-lg font-medium text-gray-700 hover:text-amber-600 transition-colors"
                         >
