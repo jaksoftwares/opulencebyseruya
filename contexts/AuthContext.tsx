@@ -264,18 +264,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Check if session exists and is valid
+        // Check if session exists
         if (session?.user) {
-          // Validate session is not expired
-          if (session.expires_at && session.expires_at * 1000 < Date.now()) {
-            console.log('Session expired, signing out');
-            await supabase.auth.signOut();
-            setUser(null);
-            setCustomer(null);
-            setLoading(false);
-            return;
-          }
-
           // Set user first
           setUser(session.user);
 
@@ -336,26 +326,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             console.log('User signed in or token refreshed');
 
-            // Validate session is not expired
-            if (session.expires_at && session.expires_at * 1000 < Date.now()) {
-              console.log('Session expired, signing out');
-              await supabase.auth.signOut();
-              setUser(null);
-              setCustomer(null);
-              localStorage.removeItem('opulence_auth');
-              setLoading(false);
-              return;
+            // For TOKEN_REFRESHED, assume the session is already refreshed and valid
+            // Only check expiry for SIGNED_IN events
+            let currentSession = session;
+
+            if (event === 'SIGNED_IN' && session.expires_at && session.expires_at * 1000 < Date.now()) {
+              console.log('Session expired, attempting to refresh...');
+              const refreshed = await refreshSession();
+              if (refreshed) {
+                // Get the refreshed session
+                const { data: { session: newSession } } = await supabase.auth.getSession();
+                if (newSession) {
+                  currentSession = newSession;
+                  console.log('Session refreshed successfully');
+                } else {
+                  console.log('Refresh failed, signing out');
+                  await supabase.auth.signOut();
+                  setUser(null);
+                  setCustomer(null);
+                  localStorage.removeItem('opulence_auth');
+                  setLoading(false);
+                  return;
+                }
+              } else {
+                console.log('Refresh failed, signing out');
+                await supabase.auth.signOut();
+                setUser(null);
+                setCustomer(null);
+                localStorage.removeItem('opulence_auth');
+                setLoading(false);
+                return;
+              }
             }
 
-            setUser(session.user);
-            const customerData = await fetchCustomer(session.user.id, session.user.email, session.user.user_metadata);
+            setUser(currentSession.user);
+            const customerData = await fetchCustomer(currentSession.user.id, currentSession.user.email, currentSession.user.user_metadata);
 
             if (customerData) {
               setCustomer(customerData);
               // Persist auth state for 7 days
               const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
               localStorage.setItem('opulence_auth', JSON.stringify({
-                user: session.user,
+                user: currentSession.user,
                 customer: customerData,
                 expiresAt: Date.now() + sevenDaysMs,
               }));
@@ -529,25 +541,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.user) {
         console.log('Creating customer record for:', { email, fullName, phone, isAdmin });
 
-        // Create customer record - using current schema for now
-        // TODO: Update this after running the migration
+        // Create customer record with the auth user ID as the primary key
         const { error: customerError } = await supabase
           .from('customers')
-          .upsert({
+          .insert({
+            id: data.user.id, // Use the auth user ID as the customer ID
             email: email.toLowerCase().trim(),
             full_name: fullName,
             phone: phone || '',
-          }, {
-            onConflict: 'email'
+            role: 'user',
+            is_active: true,
           });
 
         if (customerError) {
           console.error('Error creating customer record:', customerError);
           // Don't delete the auth user, just log the error
           console.error('Customer record creation failed, but auth user created');
+        } else {
+          console.log('Customer record created successfully');
         }
-
-        console.log('Customer record created successfully');
 
         // If admin signup, also create admin_users record
         if (isAdmin) {

@@ -10,16 +10,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, cartTotal, clearCart } = useCart();
+  const { user, customer } = useAuth();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('pay_on_delivery');
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -35,8 +39,34 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (cart.length === 0) {
       router.push('/cart');
+      return;
     }
-  }, [cart.length, router]);
+
+    // Check if user is authenticated
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in to place an order.',
+        variant: 'destructive',
+      });
+      router.push('/login');
+      return;
+    }
+  }, [cart.length, router, user, toast]);
+
+  // Pre-fill form with customer data if available
+  useEffect(() => {
+    if (customer) {
+      setFormData({
+        fullName: customer.full_name || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+        address: '',
+        city: '',
+        notes: '',
+      });
+    }
+  }, [customer]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -47,64 +77,69 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check if user is authenticated
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in to place an order.',
+        variant: 'destructive',
+      });
+      router.push('/login');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const orderNumber = `OP-${Date.now()}`;
+      // Use API endpoint for order creation
+      const orderData = {
+        customer_id: customer?.id,
+        customer_name: formData.fullName,
+        customer_email: formData.email,
+        customer_phone: formData.phone,
+        delivery_address: formData.address,
+        delivery_city: formData.city,
+        subtotal: cartTotal,
+        delivery_fee: deliveryFee,
+        total: total,
+        payment_method: paymentMethod,
+        payment_status: 'pending',
+        notes: formData.notes,
+        items: cart,
+      };
 
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert([
-          {
-            order_number: orderNumber,
-            customer_name: formData.fullName,
-            customer_email: formData.email,
-            customer_phone: formData.phone,
-            delivery_address: formData.address,
-            delivery_city: formData.city,
-            subtotal: cartTotal,
-            delivery_fee: deliveryFee,
-            total: total,
-            status: 'pending',
-            payment_method: 'mpesa',
-            payment_status: 'pending',
-            notes: formData.notes,
-          },
-        ])
-        .select()
-        .single();
+      console.log('Sending order data:', orderData);
+      console.log('User ID from context:', user?.id);
+      console.log('Customer ID from context:', customer?.id);
 
-      if (orderError) throw orderError;
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
 
-      const orderItems = cart.map((item) => ({
-        order_id: orderData.id,
-        product_id: item.id,
-        product_name: item.name,
-        product_sku: item.sku,
-        quantity: item.quantity,
-        unit_price: item.price,
-        total_price: item.price * item.quantity,
-      }));
+      const result = await response.json();
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to place order');
+      }
 
       clearCart();
 
       toast({
         title: 'Order placed successfully!',
-        description: `Your order number is ${orderNumber}. We'll contact you shortly to confirm.`,
+        description: `Your order number is ${result.order.order_number}. We'll contact you shortly to confirm.`,
       });
 
-      router.push(`/order-success?orderNumber=${orderNumber}`);
+      router.push(`/order-success?orderNumber=${result.order.order_number}&orderId=${result.order.id}`);
     } catch (error) {
       console.error('Error placing order:', error);
       toast({
         title: 'Error placing order',
-        description: 'Please try again or contact us via WhatsApp.',
+        description: error instanceof Error ? error.message : 'Please try again or contact us via WhatsApp.',
         variant: 'destructive',
       });
     } finally {
@@ -219,12 +254,31 @@ export default function CheckoutPage() {
                     <CardTitle>Payment Method</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <p className="font-medium text-green-900 mb-2">M-Pesa Payment</p>
-                      <p className="text-sm text-green-700">
-                        After placing your order, our team will contact you with M-Pesa payment instructions.
-                      </p>
-                    </div>
+                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="pay_on_delivery" id="pay_on_delivery" />
+                        <Label htmlFor="pay_on_delivery" className="flex-1">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 cursor-pointer">
+                            <p className="font-medium text-blue-900 mb-2">Pay on Delivery</p>
+                            <p className="text-sm text-blue-700">
+                              Pay cash when your order is delivered to your doorstep.
+                            </p>
+                          </div>
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2 mt-4">
+                        <RadioGroupItem value="mpesa" id="mpesa" />
+                        <Label htmlFor="mpesa" className="flex-1">
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4 cursor-pointer">
+                            <p className="font-medium text-green-900 mb-2">M-Pesa Payment</p>
+                            <p className="text-sm text-green-700">
+                              After placing your order, our team will contact you with M-Pesa payment instructions.
+                            </p>
+                          </div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </CardContent>
                 </Card>
               </div>

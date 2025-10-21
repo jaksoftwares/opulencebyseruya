@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, Phone } from 'lucide-react';
+import { Eye, Phone, RefreshCw, Truck, CheckCircle, XCircle, Clock, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +25,9 @@ interface Order {
   total: number;
   status: string;
   payment_status: string;
+  payment_method: string;
   created_at: string;
+  order_items?: OrderItem[];
 }
 
 interface OrderItem {
@@ -40,6 +42,7 @@ export default function AdminOrdersPage() {
   const { isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -56,57 +59,176 @@ export default function AdminOrdersPage() {
     }
   }, [isAdmin, authLoading, router]);
 
-  const fetchOrders = async () => {
-    const { data } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
+  const fetchOrders = async (isRefresh = false) => {
+    try {
+      console.log('Fetching admin orders...');
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
-    if (data) setOrders(data);
-    setLoading(false);
+      // Create admin client to bypass RLS
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
+
+      const { data, error } = await supabaseAdmin
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          customer_id,
+          customer_name,
+          customer_email,
+          customer_phone,
+          delivery_address,
+          delivery_city,
+          subtotal,
+          delivery_fee,
+          total,
+          status,
+          payment_method,
+          payment_status,
+          notes,
+          created_at,
+          updated_at,
+          order_items (
+            id,
+            order_id,
+            product_id,
+            product_name,
+            product_sku,
+            quantity,
+            unit_price,
+            total_price,
+            created_at
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching orders:', error);
+        toast({
+          title: 'Error loading orders',
+          description: 'Failed to load orders. Please try again.',
+          variant: 'destructive',
+        });
+      } else {
+        console.log('Orders fetched successfully:', data?.length || 0, 'orders');
+        setOrders(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast({
+        title: 'Error loading orders',
+        description: 'Failed to load orders. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   const handleViewOrder = async (order: Order) => {
     setSelectedOrder(order);
 
-    const { data } = await supabase
-      .from('order_items')
-      .select('*')
-      .eq('order_id', order.id);
+    // Order items are already included in the order data from the fetch
+    if (order.order_items) {
+      setOrderItems(order.order_items);
+    } else {
+      // Fallback: fetch order items separately if not included
+      const { data } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', order.id);
 
-    if (data) setOrderItems(data);
+      if (data) setOrderItems(data);
+    }
     setDialogOpen(true);
+  };
+
+  const handleRefresh = () => {
+    fetchOrders(true);
   };
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
-      const { error } = await supabase
+      // Create admin client to bypass RLS for updates
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
+
+      const { error } = await supabaseAdmin
         .from('orders')
-        .update({ status: newStatus })
+        .update({
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', orderId);
 
       if (error) throw error;
 
-      toast({ title: 'Order status updated' });
+      toast({
+        title: 'Order status updated',
+        description: `Order status changed to ${newStatus}`,
+      });
       fetchOrders();
 
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
       }
     } catch (error: any) {
+      console.error('Error updating order status:', error);
       toast({
-        title: 'Error',
-        description: error.message,
+        title: 'Error updating status',
+        description: error.message || 'Failed to update order status',
         variant: 'destructive',
       });
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'confirmed':
+      case 'processing':
+        return <Package className="h-4 w-4 text-blue-500" />;
+      case 'shipped':
+        return <Truck className="h-4 w-4 text-purple-500" />;
+      case 'delivered':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'cancelled':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'confirmed':
+      case 'processing':
         return 'bg-blue-100 text-blue-800';
       case 'shipped':
         return 'bg-purple-100 text-purple-800';
@@ -134,7 +256,18 @@ export default function AdminOrdersPage() {
     <div className="min-h-screen bg-gray-50">
       <AdminNav />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="font-serif text-3xl font-bold text-gray-900 mb-8">Orders</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="font-serif text-3xl font-bold text-gray-900">Orders</h1>
+          <Button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
 
         <Card>
           <CardContent className="p-0">
@@ -151,42 +284,67 @@ export default function AdminOrdersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.order_number}</TableCell>
-                    <TableCell>{order.customer_name}</TableCell>
-                    <TableCell>
-                      <a
-                        href={`https://wa.me/${order.customer_phone.replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center text-green-600 hover:text-green-700"
-                      >
-                        <Phone className="h-4 w-4 mr-1" />
-                        {order.customer_phone}
-                      </a>
-                    </TableCell>
-                    <TableCell>KES {order.total.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(order.status)}>
-                        {order.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(order.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewOrder(order)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
+                {orders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      No orders found
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  orders.map((order) => (
+                    <TableRow key={order.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium font-mono text-sm">
+                        {order.order_number}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{order.customer_name}</div>
+                          <div className="text-sm text-gray-500">{order.customer_email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <a
+                          href={`https://wa.me/${order.customer_phone.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center text-green-600 hover:text-green-700 transition-colors"
+                        >
+                          <Phone className="h-4 w-4 mr-1" />
+                          {order.customer_phone}
+                        </a>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        KES {order.total.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(order.status)}>
+                          {getStatusIcon(order.status)}
+                          <span className="ml-1 capitalize">{order.status}</span>
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {new Date(order.created_at).toLocaleDateString('en-KE', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewOrder(order)}
+                          className="hover:bg-blue-50 hover:text-blue-600"
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -200,12 +358,12 @@ export default function AdminOrdersPage() {
 
             {selectedOrder && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gray-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-sm text-gray-600 mb-1">Order Number</h3>
-                    <p className="text-gray-900">{selectedOrder.order_number}</p>
+                    <p className="text-lg font-mono text-gray-900">{selectedOrder.order_number}</p>
                   </div>
-                  <div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-sm text-gray-600 mb-1">Status</h3>
                     <Select
                       value={selectedOrder.status}
@@ -217,11 +375,19 @@ export default function AdminOrdersPage() {
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="processing">Processing</SelectItem>
                         <SelectItem value="shipped">Shipped</SelectItem>
                         <SelectItem value="delivered">Delivered</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-sm text-gray-600 mb-1">Payment Method</h3>
+                    <p className="text-gray-900 capitalize">{selectedOrder.payment_method.replace('_', ' ')}</p>
+                    <Badge variant={selectedOrder.payment_status === 'paid' ? 'default' : 'secondary'} className="mt-1">
+                      {selectedOrder.payment_status}
+                    </Badge>
                   </div>
                 </div>
 
@@ -238,30 +404,32 @@ export default function AdminOrdersPage() {
 
                 <div>
                   <h3 className="font-semibold text-sm text-gray-600 mb-2">Order Items</h3>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead className="text-right">Qty</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {orderItems.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{item.product_name}</TableCell>
-                          <TableCell className="text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-right">
-                            KES {item.unit_price.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            KES {item.total_price.toLocaleString()}
-                          </TableCell>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="font-semibold">Product</TableHead>
+                          <TableHead className="text-right font-semibold">Qty</TableHead>
+                          <TableHead className="text-right font-semibold">Unit Price</TableHead>
+                          <TableHead className="text-right font-semibold">Total</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {orderItems.map((item, index) => (
+                          <TableRow key={index} className="hover:bg-gray-50">
+                            <TableCell className="font-medium">{item.product_name}</TableCell>
+                            <TableCell className="text-right">{item.quantity}</TableCell>
+                            <TableCell className="text-right">
+                              KES {item.unit_price.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              KES {item.total_price.toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
 
                 <div className="border-t pt-4">

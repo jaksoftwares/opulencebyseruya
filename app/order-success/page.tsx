@@ -6,17 +6,54 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, Phone } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CheckCircle, Phone, Package } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function OrderSuccessPage() {
   const searchParams = useSearchParams();
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderDetails, setOrderDetails] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const order = searchParams.get('orderNumber');
+    const id = searchParams.get('orderId');
     setOrderNumber(order);
+    setOrderId(id);
+
+    if (id) {
+      fetchOrderDetails(id);
+    } else {
+      setLoading(false);
+    }
   }, [searchParams]);
+
+  const fetchOrderDetails = async (id: string) => {
+    try {
+      const { data: order, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            product_name,
+            quantity,
+            unit_price,
+            total_price
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      setOrderDetails(order);
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -39,8 +76,43 @@ export default function OrderSuccessPage() {
               )}
 
               <p className="text-gray-700 mb-6">
-                Thank you for your order! We'll contact you shortly via phone or WhatsApp to confirm your order and arrange payment.
+                Thank you for your order! We&apos;ll contact you shortly via phone or WhatsApp to confirm your order and arrange payment.
               </p>
+
+              {orderDetails && (
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      Order Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Payment Method</p>
+                        <p className="font-medium capitalize">{orderDetails.payment_method.replace('_', ' ')}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Total Amount</p>
+                        <p className="font-medium">KES {orderDetails.total.toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Items Ordered:</p>
+                      <div className="space-y-2">
+                        {orderDetails.order_items?.map((item: any, index: number) => (
+                          <div key={index} className="flex justify-between text-sm">
+                            <span>{item.product_name} x {item.quantity}</span>
+                            <span>KES {item.total_price.toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="space-y-4">
                 <p className="text-gray-600">

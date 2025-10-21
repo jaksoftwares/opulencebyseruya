@@ -116,6 +116,33 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['newsletter_subscriptions']['Row'], 'id' | 'subscribed_at'>;
         Update: Partial<Database['public']['Tables']['newsletter_subscriptions']['Insert']>;
       };
+      customers: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string;
+          phone: string | null;
+          role: 'user' | 'admin' | 'super_admin';
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['customers']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['customers']['Insert']>;
+      };
+      admin_users: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string;
+          role: 'admin' | 'super_admin';
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['admin_users']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['admin_users']['Insert']>;
+      };
     };
   };
 };
