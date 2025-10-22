@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
-import { sendOrderNotificationEmail } from '@/lib/email';
+import { sendOrderNotificationEmail, sendCustomerOrderConfirmationEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -150,6 +150,33 @@ export async function POST(request: NextRequest) {
       console.log('Order notification email sent successfully');
     } catch (emailError) {
       console.error('Failed to send order notification email:', emailError);
+      // Don't fail the order if email fails - just log it
+    }
+
+    // Send order confirmation email to customer
+    try {
+      await sendCustomerOrderConfirmationEmail({
+        orderNumber: orderNumber,
+        customerName: order.customer_name,
+        customerEmail: order.customer_email,
+        customerPhone: order.customer_phone,
+        deliveryAddress: order.delivery_address,
+        deliveryCity: order.delivery_city,
+        paymentMethod: order.payment_method,
+        subtotal: order.subtotal,
+        deliveryFee: order.delivery_fee,
+        total: order.total,
+        notes: order.notes,
+        items: orderItems.map((item: any) => ({
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+        })),
+      });
+      console.log('Customer order confirmation email sent successfully');
+    } catch (emailError) {
+      console.error('Failed to send customer order confirmation email:', emailError);
       // Don't fail the order if email fails - just log it
     }
 

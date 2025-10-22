@@ -17,6 +17,8 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 interface Category {
+  created_at: string;
+  updated_at: string;
   id: string;
   name: string;
   slug: string;
