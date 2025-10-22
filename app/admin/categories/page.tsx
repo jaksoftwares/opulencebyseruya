@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, FolderOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -26,19 +26,45 @@ interface Category {
   is_active: boolean;
 }
 
+interface Subcategory {
+  id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+  description: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  categories?: {
+    id: string;
+    name: string;
+  };
+}
+
 export default function AdminCategoriesPage() {
   const router = useRouter();
   const { isAdmin, customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [subcategoryDialogOpen, setSubcategoryDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
+  const [selectedCategoryForSubcategories, setSelectedCategoryForSubcategories] = useState<Category | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     image_url: '',
+    display_order: '',
+    is_active: true,
+  });
+  const [subcategoryFormData, setSubcategoryFormData] = useState({
+    name: '',
+    description: '',
     display_order: '',
     is_active: true,
   });
@@ -89,6 +115,25 @@ export default function AdminCategoriesPage() {
     }
   }, [toast]);
 
+  const fetchSubcategories = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/subcategories', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      const data = await res.json();
+      setSubcategories(data || []);
+    } catch (error: any) {
+      console.error('Failed to load subcategories:', error);
+      setSubcategories([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (!authLoading) {
       if (!isAdmin) {
@@ -96,9 +141,10 @@ export default function AdminCategoriesPage() {
         return;
       } else {
         fetchCategories();
+        fetchSubcategories();
       }
     }
-  }, [isAdmin, authLoading, customer, router, fetchCategories]);
+  }, [isAdmin, authLoading, customer, router, fetchCategories, fetchSubcategories]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,6 +198,22 @@ export default function AdminCategoriesPage() {
     setDialogOpen(true);
   };
 
+  const handleManageSubcategories = (category: Category) => {
+    setSelectedCategoryForSubcategories(category);
+    setSubcategoryDialogOpen(true);
+  };
+
+  const handleEditSubcategory = (subcategory: Subcategory) => {
+    setEditingSubcategory(subcategory);
+    setSubcategoryFormData({
+      name: subcategory.name,
+      description: subcategory.description || '',
+      display_order: subcategory.display_order.toString(),
+      is_active: subcategory.is_active,
+    });
+    setSubcategoryDialogOpen(true);
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this category? This may affect products.')) return;
 
@@ -164,6 +226,66 @@ export default function AdminCategoriesPage() {
       if (!res.ok) throw new Error(await res.text());
       toast({ title: 'Category deleted successfully' });
       fetchCategories();
+      fetchSubcategories();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSubmitSubcategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const slug = subcategoryFormData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const subcategoryData: any = {
+        name: subcategoryFormData.name,
+        slug,
+        description: subcategoryFormData.description || '',
+        display_order: subcategoryFormData.display_order ? parseInt(subcategoryFormData.display_order) : 0,
+        is_active: !!subcategoryFormData.is_active,
+        category_id: selectedCategoryForSubcategories?.id,
+      };
+
+      const method = editingSubcategory ? 'PUT' : 'POST';
+      const res = await fetch('/api/admin/subcategories', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingSubcategory ? { ...subcategoryData, id: editingSubcategory.id } : subcategoryData),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      toast({
+        title: editingSubcategory ? 'Subcategory updated successfully' : 'Subcategory created successfully'
+      });
+      setSubcategoryDialogOpen(false);
+      resetSubcategoryForm();
+      fetchSubcategories();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteSubcategory = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this subcategory?')) return;
+
+    try {
+      const res = await fetch('/api/admin/subcategories', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast({ title: 'Subcategory deleted successfully' });
+      fetchSubcategories();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -182,6 +304,17 @@ export default function AdminCategoriesPage() {
       is_active: true,
     });
     setEditingCategory(null);
+  };
+
+  const resetSubcategoryForm = () => {
+    setSubcategoryFormData({
+      name: '',
+      description: '',
+      display_order: '',
+      is_active: true,
+    });
+    setEditingSubcategory(null);
+    setSelectedCategoryForSubcategories(null);
   };
 
   if (authLoading || loading) {
@@ -229,7 +362,10 @@ export default function AdminCategoriesPage() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={fetchCategories}
+              onClick={() => {
+                fetchCategories();
+                fetchSubcategories();
+              }}
               disabled={authLoading || loading}
             >
               Refresh
@@ -366,6 +502,14 @@ export default function AdminCategoriesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleManageSubcategories(category)}
+                            title="Manage subcategories"
+                          >
+                            <FolderOpen className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleEdit(category)}
                           >
                             <Edit className="h-4 w-4" />
@@ -387,7 +531,7 @@ export default function AdminCategoriesPage() {
                     <TableCell colSpan={6} className="text-center py-8">
                       <div className="text-gray-500">
                         <p className="text-lg mb-2">No categories found</p>
-                        <p className="text-sm">Click "Add Category" to create your first category</p>
+                        <p className="text-sm">Click &quote;Add Category&quote; to create your first category</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -396,6 +540,134 @@ export default function AdminCategoriesPage() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Subcategories Management Dialog */}
+        <Dialog open={subcategoryDialogOpen} onOpenChange={(open) => {
+          setSubcategoryDialogOpen(open);
+          if (!open) resetSubcategoryForm();
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">
+                Manage Subcategories for {selectedCategoryForSubcategories?.name}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedCategoryForSubcategories && (
+              <div className="space-y-6">
+                {/* Current Subcategories */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-4">Current Subcategories</h3>
+                  <div className="space-y-3">
+                    {subcategories.filter(sc => sc.category_id === selectedCategoryForSubcategories.id).length > 0 ? (
+                      subcategories.filter(sc => sc.category_id === selectedCategoryForSubcategories.id).map((subcategory) => (
+                        <div key={subcategory.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <p className="font-medium">{subcategory.name}</p>
+                              <p className="text-sm text-gray-600">Slug: {subcategory.slug}</p>
+                              {subcategory.description && (
+                                <p className="text-sm text-gray-500">{subcategory.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <p className="text-sm text-gray-600">Order: {subcategory.display_order}</p>
+                              <Badge variant={subcategory.is_active ? 'default' : 'secondary'} className="text-xs">
+                                {subcategory.is_active ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditSubcategory(subcategory)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteSubcategory(subcategory.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">No subcategories found for this category.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Add New Subcategory */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-4">
+                    {editingSubcategory ? 'Edit Subcategory' : 'Add New Subcategory'}
+                  </h3>
+                  <form onSubmit={handleSubmitSubcategory} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="subcategory_name">Subcategory Name *</Label>
+                        <Input
+                          id="subcategory_name"
+                          value={subcategoryFormData.name}
+                          onChange={(e) => setSubcategoryFormData({ ...subcategoryFormData, name: e.target.value })}
+                          placeholder="Enter subcategory name"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="subcategory_display_order">Display Order</Label>
+                        <Input
+                          id="subcategory_display_order"
+                          type="number"
+                          value={subcategoryFormData.display_order}
+                          onChange={(e) => setSubcategoryFormData({ ...subcategoryFormData, display_order: e.target.value })}
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="subcategory_description">Description</Label>
+                      <Textarea
+                        id="subcategory_description"
+                        value={subcategoryFormData.description}
+                        onChange={(e) => setSubcategoryFormData({ ...subcategoryFormData, description: e.target.value })}
+                        placeholder="Describe this subcategory..."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="subcategory_is_active"
+                        checked={subcategoryFormData.is_active}
+                        onChange={(e) => setSubcategoryFormData({ ...subcategoryFormData, is_active: e.target.checked })}
+                        className="rounded"
+                      />
+                      <Label htmlFor="subcategory_is_active" className="cursor-pointer">Active</Label>
+                    </div>
+
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <Button type="button" variant="outline" onClick={() => setSubcategoryDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" className="bg-amber-600 hover:bg-amber-700">
+                        {editingSubcategory ? 'Update' : 'Create'} Subcategory
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

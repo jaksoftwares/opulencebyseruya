@@ -48,6 +48,14 @@ interface Category {
   name: string;
 }
 
+interface Supplier {
+  id: string;
+  name: string;
+  company_name: string;
+  email: string;
+  phone: string;
+}
+
 export default function AdminProductsPage() {
   const router = useRouter();
   const { isAdmin, loading: authLoading } = useAuth();
@@ -57,13 +65,33 @@ export default function AdminProductsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    price: string;
+    compare_at_price: string;
+    original_price: string;
+    discount: string;
+    stock_quantity: string;
+    stock_left: string;
+    sku: string;
+    category_id: string;
+    subcategory_id: string;
+    supplier_id: string;
+    rating: string;
+    reviews: string;
+    badge: string;
+    tag: string;
+    is_featured: boolean;
+    is_active: boolean;
+  }>({
     name: '',
     description: '',
     price: '',
@@ -74,6 +102,8 @@ export default function AdminProductsPage() {
     stock_left: '',
     sku: '',
     category_id: '',
+    subcategory_id: '',
+    supplier_id: '',
     rating: '',
     reviews: '',
     badge: '',
@@ -103,12 +133,13 @@ export default function AdminProductsPage() {
       } else {
         setLoading(true);
       }
-      const [productsRes, categoriesRes] = await Promise.all([
+      const [productsRes, categoriesRes, suppliersRes] = await Promise.all([
         supabase
           .from('products')
           .select('id, category_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, created_at, updated_at')
           .order('created_at', { ascending: false }),
         supabase.from('categories').select('id, name').eq('is_active', true),
+        supabase.from('suppliers').select('id, name, company_name, email, phone').eq('is_active', true),
       ]);
 
       if (productsRes.error) {
@@ -126,6 +157,12 @@ export default function AdminProductsPage() {
         console.error('Error fetching categories:', categoriesRes.error);
       } else {
         setCategories(categoriesRes.data || []);
+      }
+
+      if (suppliersRes.error) {
+        console.error('Error fetching suppliers:', suppliersRes.error);
+      } else {
+        setSuppliers(suppliersRes.data || []);
       }
     } catch (error) {
       console.error('Error in fetchData:', error);
@@ -162,12 +199,25 @@ export default function AdminProductsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Only allow submission on the final step
+    if (currentStep !== 3) {
+      return;
+    }
+
     setUploading(true);
     try {
       const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       let imageUrls: string[] = [...existingImages];
 
-      // Upload images to Cloudinary only after form submit
+      // Show uploading message
+      toast({
+        title: 'Uploading Images',
+        description: 'Please wait while we upload your images to the cloud...',
+        variant: 'default',
+      });
+
+      // Upload images to Cloudinary FIRST
       if (imageFiles.length > 0) {
         const { uploadImageToCloudinary } = await import('@/lib/cloudinary');
         imageUrls = imageUrls.concat(
@@ -212,6 +262,23 @@ export default function AdminProductsPage() {
       productData.tag = formData.tag || null;
       productData.sold_count = null;
 
+      toast({
+        title: 'Saving Product',
+        description: 'Saving product data to database...',
+        variant: 'default',
+      });
+
+      // Create supplier_products entry if supplier is selected
+      let supplierProductData = null;
+      if (formData.supplier_id) {
+        supplierProductData = {
+          supplier_id: formData.supplier_id,
+          product_id: null, // Will be set after product creation
+          purchase_price: price,
+          quantity_supplied: stock_quantity,
+        };
+      }
+
       const method = editingProduct ? 'PUT' : 'POST';
       const res = await fetch('/api/admin/products', {
         method,
@@ -224,7 +291,30 @@ export default function AdminProductsPage() {
         throw new Error(errorText || 'Failed to add product');
       }
 
-  toast({ title: editingProduct ? 'Product updated successfully' : 'Product created successfully', description: 'Product has been uploaded and saved successfully.', variant: 'default' });
+      const createdProduct = await res.json();
+
+      // Create supplier_products entry if supplier was selected
+      if (supplierProductData) {
+        try {
+          await fetch('/api/admin/supplier-products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...supplierProductData,
+              product_id: createdProduct.id,
+            }),
+          });
+        } catch (supplierError) {
+          console.error('Failed to create supplier product relationship:', supplierError);
+          // Don't throw here as the product was created successfully
+        }
+      }
+
+      toast({
+        title: editingProduct ? 'Product updated successfully' : 'Product created successfully',
+        description: 'Product has been uploaded and saved successfully.',
+        variant: 'default'
+      });
       setDialogOpen(false);
       resetForm();
       fetchData();
@@ -252,6 +342,8 @@ export default function AdminProductsPage() {
       stock_left: product.stock_left?.toString() || product.stock_quantity.toString(),
       sku: product.sku,
       category_id: product.category_id || '',
+      subcategory_id: '', // Note: This would need to be fetched from product_subcategory relationship
+      supplier_id: '', // Note: This would need to be fetched from supplier_products table
       rating: product.rating?.toString() || '',
       reviews: product.reviews?.toString() || '',
       badge: product.badge || '',
@@ -304,6 +396,8 @@ export default function AdminProductsPage() {
       stock_left: '',
       sku: '',
       category_id: '',
+      subcategory_id: '',
+      supplier_id: '',
       rating: '',
       reviews: '',
       badge: '',
@@ -395,12 +489,16 @@ export default function AdminProductsPage() {
                 </div>
                 <div className="flex justify-between text-xs text-gray-600 mt-2">
                   <span>Basic Info</span>
-                  <span>Images & Pricing</span>
-                  <span>Additional Details</span>
+                  <span>Pricing & Details</span>
+                  <span>Images</span>
                 </div>
               </DialogHeader>
 
-              <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+              <form onSubmit={handleSubmit} onKeyDown={(e) => {
+                if (e.key === 'Enter' && currentStep !== 3) {
+                  e.preventDefault();
+                }
+              }} className="space-y-6 mt-6">
                 {/* Step 1: Basic Information */}
                 {currentStep === 1 && (
                   <div className="space-y-4">
@@ -462,6 +560,26 @@ export default function AdminProductsPage() {
                       </div>
                     </div>
 
+                    <div>
+                      <Label htmlFor="supplier_id" className="text-base">Supplier</Label>
+                      <Select
+                        value={formData.supplier_id}
+                        onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
+                      >
+                        <SelectTrigger className="mt-1.5">
+                          <SelectValue placeholder="Select supplier (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.name} {supplier.company_name && `(${supplier.company_name})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">Selecting a supplier will automatically create a supplier-product relationship</p>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="price" className="text-base">Price (KES) *</Label>
@@ -493,80 +611,9 @@ export default function AdminProductsPage() {
                   </div>
                 )}
 
-                {/* Step 2: Images & Pricing */}
+                {/* Step 2: Pricing & Details */}
                 {currentStep === 2 && (
                   <div className="space-y-4">
-                    <div>
-                      <Label className="text-base">Product Images</Label>
-                      <div className="mt-2">
-                        <label htmlFor="images" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                            <p className="text-sm text-gray-600">Click to upload images</p>
-                            <p className="text-xs text-gray-500">PNG, JPG, WEBP up to 10MB</p>
-                          </div>
-                          <Input
-                            id="images"
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handleImageChange}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-
-                      {/* Existing Images */}
-                      {existingImages.length > 0 && (
-                        <div className="mt-4">
-                          <p className="text-sm font-medium text-gray-700 mb-2">Current Images</p>
-                          <div className="grid grid-cols-4 gap-3">
-                            {existingImages.map((img, index) => (
-                              <div key={index} className="relative group">
-                                <img
-                                  src={img}
-                                  alt={`Existing ${index + 1}`}
-                                  className="w-full h-24 object-cover rounded-lg border"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => removeExistingImage(index)}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* New Image Previews */}
-                      {imagePreviews.length > 0 && (
-                        <div className="mt-4">
-                          <p className="text-sm font-medium text-gray-700 mb-2">New Images</p>
-                          <div className="grid grid-cols-4 gap-3">
-                            {imagePreviews.map((preview, index) => (
-                              <div key={index} className="relative group">
-                                <img
-                                  src={preview}
-                                  alt={`Preview ${index + 1}`}
-                                  className="w-full h-24 object-cover rounded-lg border"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => removeImagePreview(index)}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="original_price" className="text-base">Original Price (KES)</Label>
@@ -622,17 +669,7 @@ export default function AdminProductsPage() {
                         />
                       </div>
                     </div>
-                  </div>
-                )}
 
-                {/* Step 3: Additional Details */}
-                {uploading && (
-                  <div className="flex justify-center items-center py-4">
-                    <span className="text-amber-600 font-semibold text-lg">Uploading product, please wait...</span>
-                  </div>
-                )}
-                {currentStep === 3 && (
-                  <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="rating" className="text-base">Rating (1-5)</Label>
@@ -722,6 +759,88 @@ export default function AdminProductsPage() {
                   </div>
                 )}
 
+                {/* Step 3: Images */}
+                {uploading && (
+                  <div className="flex justify-center items-center py-4">
+                    <span className="text-amber-600 font-semibold text-lg">Uploading product, please wait...</span>
+                  </div>
+                )}
+                {currentStep === 3 && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-base">Product Images</Label>
+                      <div className="mt-2">
+                        <label htmlFor="images" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                            <p className="text-sm text-gray-600">Click to upload images</p>
+                            <p className="text-xs text-gray-500">PNG, JPG, WEBP up to 10MB</p>
+                          </div>
+                          <Input
+                            id="images"
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleImageChange}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {/* Existing Images */}
+                      {existingImages.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-sm font-medium text-gray-700 mb-2">Current Images</p>
+                          <div className="grid grid-cols-4 gap-3">
+                            {existingImages.map((img, index) => (
+                              <div key={index} className="relative group">
+                                <img
+                                  src={img}
+                                  alt={`Existing ${index + 1}`}
+                                  className="w-full h-24 object-cover rounded-lg border"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeExistingImage(index)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* New Image Previews */}
+                      {imagePreviews.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-sm font-medium text-gray-700 mb-2">New Images</p>
+                          <div className="grid grid-cols-4 gap-3">
+                            {imagePreviews.map((preview, index) => (
+                              <div key={index} className="relative group">
+                                <img
+                                  src={preview}
+                                  alt={`Preview ${index + 1}`}
+                                  className="w-full h-24 object-cover rounded-lg border"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeImagePreview(index)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              
+
                 {/* Navigation Buttons */}
                 <div className="flex justify-between pt-6 border-t">
                   <div>
@@ -740,8 +859,8 @@ export default function AdminProductsPage() {
                         Next Step
                       </Button>
                     ) : (
-                      <Button type="submit" className="bg-amber-600 hover:bg-amber-700">
-                        {editingProduct ? 'Update' : 'Create'} Product
+                      <Button type="submit" disabled={uploading} className="bg-amber-600 hover:bg-amber-700">
+                        {uploading ? 'Creating Product...' : (editingProduct ? 'Update' : 'Create') + ' Product'}
                       </Button>
                     )}
                   </div>

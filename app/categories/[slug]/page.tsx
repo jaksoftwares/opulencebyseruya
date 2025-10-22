@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/lib/supabase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Filter } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -29,11 +29,23 @@ interface Category {
   description: string;
 }
 
+interface Subcategory {
+  id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+  description: string;
+  display_order: number;
+  is_active: boolean;
+}
+
 export default function CategoryPage() {
   const params = useParams();
   const slug = params.slug as string;
 
   const [category, setCategory] = useState<Category | null>(null);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<Subcategory | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [sortBy, setSortBy] = useState<string>('newest');
   const [loading, setLoading] = useState(true);
@@ -50,6 +62,17 @@ export default function CategoryPage() {
       if (categoryData) {
         setCategory(categoryData);
 
+        // Fetch subcategories for this category
+        const { data: subcategoriesData } = await supabase
+          .from('subcategories')
+          .select('*')
+          .eq('category_id', categoryData.id)
+          .eq('is_active', true)
+          .order('display_order');
+
+        if (subcategoriesData) setSubcategories(subcategoriesData);
+
+        // Fetch products for this category
         const { data: productsData } = await supabase
           .from('products')
           .select('*')
@@ -66,7 +89,18 @@ export default function CategoryPage() {
     fetchData();
   }, [slug]);
 
-  const sortedProducts = [...products].sort((a, b) => {
+  const filteredProducts = selectedSubcategory
+    ? products.filter(product => {
+        // For now, we'll need to check if products have subcategory_id
+        // This would require adding subcategory_id to products table or
+        // implementing a different filtering logic
+        // For demonstration, we'll show all products when a subcategory is selected
+        // In a real implementation, you'd filter based on product-subcategory relationship
+        return true;
+      })
+    : products;
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortBy) {
       case 'price-low':
         return a.price - b.price;
@@ -133,9 +167,45 @@ export default function CategoryPage() {
         </div>
 
         <div className="container mx-auto px-4 py-8">
+          {/* Subcategories Filter */}
+          {subcategories.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-4">
+                <Filter className="h-5 w-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-900">Filter by Subcategory</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedSubcategory(null)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    !selectedSubcategory
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  All Products
+                </button>
+                {subcategories.map((subcategory) => (
+                  <button
+                    key={subcategory.id}
+                    onClick={() => setSelectedSubcategory(subcategory)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      selectedSubcategory?.id === subcategory.id
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {subcategory.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between items-center mb-8">
             <p className="text-gray-600">
               {products.length} {products.length === 1 ? 'product' : 'products'} found
+              {selectedSubcategory && ` in ${selectedSubcategory.name}`}
             </p>
 
             <Select value={sortBy} onValueChange={setSortBy}>

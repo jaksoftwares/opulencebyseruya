@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Eye, Phone, Mail, MapPin, Building } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Phone, Mail, MapPin, Building, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -28,7 +28,6 @@ interface Supplier {
   country: string;
   contact_person: string;
   website: string;
-  products_supplied: string[];
   payment_terms: string;
   credit_limit: number;
   is_active: boolean;
@@ -37,16 +36,134 @@ interface Supplier {
   updated_at: string;
 }
 
+interface SupplierProduct {
+  id: string;
+  supplier_id: string;
+  product_id: string;
+  purchase_price: number;
+  quantity_supplied: number;
+  created_at: string;
+  updated_at: string;
+  products: {
+    id: string;
+    name: string;
+    sku: string;
+    price: number;
+  };
+}
+
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+}
+
+function AddProductToSupplierForm({ supplierId, products, supplierProducts, onSuccess }: { supplierId: string; products: Product[]; supplierProducts: SupplierProduct[]; onSuccess: () => void }) {
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [quantitySupplied, setQuantitySupplied] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/admin/supplier-products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplier_id: supplierId,
+          product_id: selectedProductId,
+          purchase_price: parseFloat(purchasePrice),
+          quantity_supplied: parseInt(quantitySupplied),
+        }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      setSelectedProductId('');
+      setPurchasePrice('');
+      setQuantitySupplied('');
+      onSuccess();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const availableProducts = products.filter(p => !supplierProducts.some(sp => sp.product_id === p.id && sp.supplier_id === supplierId));
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="product">Product *</Label>
+          <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select product" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableProducts.map((product) => (
+                <SelectItem key={product.id} value={product.id}>
+                  {product.name} (SKU: {product.sku})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="purchase_price">Purchase Price (KES) *</Label>
+          <Input
+            id="purchase_price"
+            type="number"
+            step="0.01"
+            value={purchasePrice}
+            onChange={(e) => setPurchasePrice(e.target.value)}
+            placeholder="0.00"
+            required
+          />
+        </div>
+      </div>
+      <div>
+        <Label htmlFor="quantity_supplied">Quantity Supplied *</Label>
+        <Input
+          id="quantity_supplied"
+          type="number"
+          value={quantitySupplied}
+          onChange={(e) => setQuantitySupplied(e.target.value)}
+          placeholder="0"
+          required
+        />
+      </div>
+      <Button type="submit" disabled={loading || !selectedProductId || !purchasePrice || !quantitySupplied}>
+        {loading ? 'Adding...' : 'Add Product'}
+      </Button>
+    </form>
+  );
+}
+
 export default function AdminSuppliersPage() {
   const router = useRouter();
   const { isAdmin, customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierProducts, setSupplierProducts] = useState<SupplierProduct[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [viewingSupplier, setViewingSupplier] = useState<Supplier | null>(null);
+  const [supplierProductsDialogOpen, setSupplierProductsDialogOpen] = useState(false);
+  const [selectedSupplierForProducts, setSelectedSupplierForProducts] = useState<Supplier | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -58,7 +175,6 @@ export default function AdminSuppliersPage() {
     country: '',
     contact_person: '',
     website: '',
-    products_supplied: '',
     payment_terms: '',
     credit_limit: '',
     is_active: true,
@@ -114,6 +230,45 @@ export default function AdminSuppliersPage() {
     }
   }, [toast]);
 
+  const fetchSupplierProducts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/supplier-products', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      const data = await res.json();
+      setSupplierProducts(data || []);
+    } catch (error: any) {
+      console.error('Failed to load supplier products:', error);
+      setSupplierProducts([]);
+    }
+  }, []);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, sku, price')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching products:', error);
+        setProducts([]);
+      } else {
+        setProducts(data || []);
+      }
+    } catch (error: any) {
+      console.error('Failed to load products:', error);
+      setProducts([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (!authLoading) {
       if (!isAdmin) {
@@ -121,9 +276,11 @@ export default function AdminSuppliersPage() {
         return;
       } else {
         fetchSuppliers();
+        fetchSupplierProducts();
+        fetchProducts();
       }
     }
-  }, [isAdmin, authLoading, customer, router, fetchSuppliers]);
+  }, [isAdmin, authLoading, customer, router, fetchSuppliers, fetchSupplierProducts, fetchProducts]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +297,6 @@ export default function AdminSuppliersPage() {
         country: formData.country || '',
         contact_person: formData.contact_person || '',
         website: formData.website || '',
-        products_supplied: formData.products_supplied ? formData.products_supplied.split(',').map(p => p.trim()) : [],
         payment_terms: formData.payment_terms || '',
         credit_limit: formData.credit_limit ? parseFloat(formData.credit_limit) : 0,
         is_active: !!formData.is_active,
@@ -186,7 +342,6 @@ export default function AdminSuppliersPage() {
       country: supplier.country || '',
       contact_person: supplier.contact_person || '',
       website: supplier.website || '',
-      products_supplied: supplier.products_supplied ? supplier.products_supplied.join(', ') : '',
       payment_terms: supplier.payment_terms || '',
       credit_limit: supplier.credit_limit ? supplier.credit_limit.toString() : '',
       is_active: supplier.is_active,
@@ -198,6 +353,11 @@ export default function AdminSuppliersPage() {
   const handleView = (supplier: Supplier) => {
     setViewingSupplier(supplier);
     setViewDialogOpen(true);
+  };
+
+  const handleManageProducts = (supplier: Supplier) => {
+    setSelectedSupplierForProducts(supplier);
+    setSupplierProductsDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -236,7 +396,6 @@ export default function AdminSuppliersPage() {
       country: '',
       contact_person: '',
       website: '',
-      products_supplied: '',
       payment_terms: '',
       credit_limit: '',
       is_active: true,
@@ -263,7 +422,7 @@ export default function AdminSuppliersPage() {
           <CardHeader className="text-center">
             <div className="text-6xl mb-4">🔒</div>
             <CardTitle>Access Denied</CardTitle>
-            <p className="text-gray-600">You don't have permission to access this page.</p>
+            <p className="text-gray-600">You don&apos;t have permission to access this page.</p>
           </CardHeader>
           <CardContent>
             <Button asChild className="w-full">
@@ -290,7 +449,11 @@ export default function AdminSuppliersPage() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={fetchSuppliers}
+              onClick={() => {
+                fetchSuppliers();
+                fetchSupplierProducts();
+                fetchProducts();
+              }}
               disabled={authLoading || loading}
             >
               Refresh
@@ -417,16 +580,6 @@ export default function AdminSuppliersPage() {
                 {/* Business Information */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="products_supplied">Products Supplied</Label>
-                    <Input
-                      id="products_supplied"
-                      value={formData.products_supplied}
-                      onChange={(e) => setFormData({ ...formData, products_supplied: e.target.value })}
-                      placeholder="e.g., Electronics, Furniture, Clothing"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Separate multiple products with commas</p>
-                  </div>
-                  <div>
                     <Label htmlFor="payment_terms">Payment Terms</Label>
                     <Select
                       value={formData.payment_terms}
@@ -445,9 +598,6 @@ export default function AdminSuppliersPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="credit_limit">Credit Limit (KES)</Label>
                     <Input
@@ -459,16 +609,17 @@ export default function AdminSuppliersPage() {
                       placeholder="0.00"
                     />
                   </div>
-                  <div className="flex items-center space-x-2 pt-8">
-                    <input
-                      type="checkbox"
-                      id="is_active"
-                      checked={formData.is_active}
-                      onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                      className="rounded"
-                    />
-                    <Label htmlFor="is_active" className="cursor-pointer">Active Supplier</Label>
-                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={formData.is_active}
+                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                    className="rounded"
+                  />
+                  <Label htmlFor="is_active" className="cursor-pointer">Active Supplier</Label>
                 </div>
 
                 <div>
@@ -585,13 +736,13 @@ export default function AdminSuppliersPage() {
                   <div>
                     <h3 className="font-semibold text-lg mb-4">Business Details</h3>
                     <div className="space-y-3">
-                      {viewingSupplier.products_supplied && viewingSupplier.products_supplied.length > 0 && (
+                      {supplierProducts.filter(sp => sp.supplier_id === viewingSupplier.id).length > 0 && (
                         <div>
                           <p className="text-sm text-gray-600">Products Supplied</p>
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {viewingSupplier.products_supplied.map((product, index) => (
+                            {supplierProducts.filter(sp => sp.supplier_id === viewingSupplier.id).map((sp, index) => (
                               <Badge key={index} variant="outline" className="text-xs">
-                                {product}
+                                {sp.products.name} (KES {sp.purchase_price})
                               </Badge>
                             ))}
                           </div>
@@ -637,6 +788,88 @@ export default function AdminSuppliersPage() {
                       <p>Last Updated: {new Date(viewingSupplier.updated_at).toLocaleDateString()}</p>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Supplier Products Management Dialog */}
+        <Dialog open={supplierProductsDialogOpen} onOpenChange={setSupplierProductsDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">
+                Manage Products for {selectedSupplierForProducts?.name}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedSupplierForProducts && (
+              <div className="space-y-6">
+                {/* Current Products */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-4">Current Products</h3>
+                  <div className="space-y-3">
+                    {supplierProducts.filter(sp => sp.supplier_id === selectedSupplierForProducts.id).length > 0 ? (
+                      supplierProducts.filter(sp => sp.supplier_id === selectedSupplierForProducts.id).map((sp) => (
+                        <div key={sp.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <p className="font-medium">{sp.products.name}</p>
+                              <p className="text-sm text-gray-600">SKU: {sp.products.sku}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <p className="font-medium">KES {sp.purchase_price.toLocaleString()}</p>
+                              <p className="text-sm text-gray-600">Qty: {sp.quantity_supplied}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={async () => {
+                                if (confirm('Remove this product from supplier?')) {
+                                  try {
+                                    const res = await fetch('/api/admin/supplier-products', {
+                                      method: 'DELETE',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ id: sp.id }),
+                                    });
+                                    if (!res.ok) throw new Error(await res.text());
+                                    fetchSupplierProducts();
+                                    toast({ title: 'Product removed successfully' });
+                                  } catch (error: any) {
+                                    toast({
+                                      title: 'Error',
+                                      description: error.message,
+                                      variant: 'destructive',
+                                    });
+                                  }
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">No products assigned to this supplier yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Add New Product */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-4">Add New Product</h3>
+                  <AddProductToSupplierForm
+                    supplierId={selectedSupplierForProducts.id}
+                    products={products}
+                    supplierProducts={supplierProducts}
+                    onSuccess={() => {
+                      fetchSupplierProducts();
+                      toast({ title: 'Product added successfully' });
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -690,21 +923,21 @@ export default function AdminSuppliersPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {supplier.products_supplied && supplier.products_supplied.length > 0 ? (
+                        {supplierProducts.filter(sp => sp.supplier_id === supplier.id).length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {supplier.products_supplied.slice(0, 2).map((product, index) => (
+                            {supplierProducts.filter(sp => sp.supplier_id === supplier.id).slice(0, 2).map((sp, index) => (
                               <Badge key={index} variant="outline" className="text-xs">
-                                {product}
+                                {sp.products.name}
                               </Badge>
                             ))}
-                            {supplier.products_supplied.length > 2 && (
+                            {supplierProducts.filter(sp => sp.supplier_id === supplier.id).length > 2 && (
                               <Badge variant="outline" className="text-xs">
-                                +{supplier.products_supplied.length - 2} more
+                                +{supplierProducts.filter(sp => sp.supplier_id === supplier.id).length - 2} more
                               </Badge>
                             )}
                           </div>
                         ) : (
-                          <span className="text-gray-400">Not specified</span>
+                          <span className="text-gray-400">No products</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -724,6 +957,14 @@ export default function AdminSuppliersPage() {
                             title="View supplier details"
                           >
                             <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleManageProducts(supplier)}
+                            title="Manage products"
+                          >
+                            <Package className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
