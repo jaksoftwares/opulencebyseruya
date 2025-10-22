@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 interface Product {
   id: string;
   category_id: string | null;
+  subcategory_id: string | null;
   name: string;
   slug: string;
   description: string;
@@ -48,6 +49,12 @@ interface Category {
   name: string;
 }
 
+interface Subcategory {
+  id: string;
+  name: string;
+  category_id: string;
+}
+
 interface Supplier {
   id: string;
   name: string;
@@ -65,6 +72,7 @@ export default function AdminProductsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -134,12 +142,13 @@ export default function AdminProductsPage() {
       } else {
         setLoading(true);
       }
-      const [productsRes, categoriesRes, suppliersRes] = await Promise.all([
+      const [productsRes, categoriesRes, subcategoriesRes, suppliersRes] = await Promise.all([
         supabase
           .from('products')
-          .select('id, category_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, created_at, updated_at')
+          .select('id, category_id, subcategory_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, created_at, updated_at')
           .order('created_at', { ascending: false }),
         supabase.from('categories').select('id, name').eq('is_active', true),
+        supabase.from('subcategories').select('id, name, category_id').eq('is_active', true),
         supabase.from('suppliers').select('id, name, company_name, email, phone').eq('is_active', true),
       ]);
 
@@ -158,6 +167,12 @@ export default function AdminProductsPage() {
         console.error('Error fetching categories:', categoriesRes.error);
       } else {
         setCategories(categoriesRes.data || []);
+      }
+
+      if (subcategoriesRes.error) {
+        console.error('Error fetching subcategories:', subcategoriesRes.error);
+      } else {
+        setSubcategories(subcategoriesRes.data || []);
       }
 
       if (suppliersRes.error) {
@@ -249,6 +264,7 @@ export default function AdminProductsPage() {
       };
       // Optional fields (nullable)
       productData.category_id = formData.category_id || null;
+      productData.subcategory_id = formData.subcategory_id || null;
       productData.description = formData.description || '';
       productData.compare_at_price = compareAtPrice !== null ? compareAtPrice : null;
       productData.original_price = formData.original_price ? parseFloat(formData.original_price) : null;
@@ -346,7 +362,7 @@ export default function AdminProductsPage() {
       stock_left: product.stock_left?.toString() || product.stock_quantity.toString(),
       sku: product.sku,
       category_id: product.category_id || '',
-      subcategory_id: '', // Note: This would need to be fetched from product_subcategory relationship
+      subcategory_id: product.subcategory_id || '',
       supplier_id: '', // Note: This would need to be fetched from supplier_products table
       rating: product.rating?.toString() || '',
       reviews: product.reviews?.toString() || '',
@@ -557,7 +573,13 @@ export default function AdminProductsPage() {
                         <Label htmlFor="category_id" className="text-base">Category</Label>
                         <Select
                           value={formData.category_id}
-                          onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                          onValueChange={(value) => {
+                            setFormData({
+                              ...formData,
+                              category_id: value,
+                              subcategory_id: '' // Reset subcategory when category changes
+                            });
+                          }}
                         >
                           <SelectTrigger className="mt-1.5">
                             <SelectValue placeholder="Select category" />
@@ -572,6 +594,31 @@ export default function AdminProductsPage() {
                         </Select>
                       </div>
                     </div>
+
+                    {/* Subcategory Selection - Only show if category has subcategories */}
+                    {formData.category_id && subcategories.filter(sc => sc.category_id === formData.category_id).length > 0 && (
+                      <div>
+                        <Label htmlFor="subcategory_id" className="text-base">Subcategory</Label>
+                        <Select
+                          value={formData.subcategory_id}
+                          onValueChange={(value) => setFormData({ ...formData, subcategory_id: value })}
+                        >
+                          <SelectTrigger className="mt-1.5">
+                            <SelectValue placeholder="Select subcategory (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {subcategories
+                              .filter(sc => sc.category_id === formData.category_id)
+                              .map((subcat) => (
+                                <SelectItem key={subcat.id} value={subcat.id}>
+                                  {subcat.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-500 mt-1">Choose a subcategory to better organize your product</p>
+                      </div>
+                    )}
 
                     <div>
                       <Label htmlFor="supplier_id" className="text-base">Supplier</Label>

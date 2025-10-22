@@ -26,7 +26,7 @@ export async function sendOrderNotificationEmail(orderData: OrderEmailData) {
   try {
     const { data, error } = await resend.emails.send({
       from: 'Opulence by Seruya <orders@opulencebyseruya.co.ke>',
-      to: ['opulenceseruya@gmail.com'],
+      to: ['opulencebyseruya@gmail.com'],
       subject: `New Order Received - ${orderData.orderNumber}`,
       html: generateOrderEmailHTML(orderData),
     });
