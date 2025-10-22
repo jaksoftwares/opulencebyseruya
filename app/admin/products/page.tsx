@@ -71,6 +71,7 @@ export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState<{
     name: string;
@@ -198,8 +199,10 @@ export default function AdminProductsPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    if (submitting) return; // Prevent double submission
 
     setUploading(true);
+    setSubmitting(true);
     try {
       const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       let imageUrls: string[] = [...existingImages];
@@ -309,9 +312,15 @@ export default function AdminProductsPage() {
         description: 'Product has been uploaded and saved successfully.',
         variant: 'default'
       });
+
+      // Close dialog and reset form
       setDialogOpen(false);
       resetForm();
-      fetchData();
+
+      // Refresh data after a short delay to ensure database consistency
+      setTimeout(() => {
+        fetchData();
+      }, 500);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -320,6 +329,7 @@ export default function AdminProductsPage() {
       });
     } finally {
       setUploading(false);
+      setSubmitting(false);
     }
   };
 
@@ -368,7 +378,11 @@ export default function AdminProductsPage() {
       });
       if (!res.ok) throw new Error(await res.text());
       toast({ title: 'Product deleted successfully' });
-      fetchData();
+
+      // Refresh data after a short delay to ensure database consistency
+      setTimeout(() => {
+        fetchData();
+      }, 500);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -858,8 +872,8 @@ export default function AdminProductsPage() {
                         Next Step
                       </Button>
                     ) : (
-                      <Button type="button" disabled={uploading} onClick={() => handleSubmit(new Event('submit') as any)} className="bg-amber-600 hover:bg-amber-700">
-                        {uploading ? 'Creating Product...' : (editingProduct ? 'Update' : 'Create') + ' Product'}
+                      <Button type="button" disabled={uploading || submitting} onClick={() => handleSubmit(new Event('submit') as any)} className="bg-amber-600 hover:bg-amber-700">
+                        {uploading ? 'Creating Product...' : submitting ? 'Saving...' : (editingProduct ? 'Update' : 'Create') + ' Product'}
                       </Button>
                     )}
                   </div>
