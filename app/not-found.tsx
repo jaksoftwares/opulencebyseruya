@@ -19,8 +19,8 @@ export default function NotFoundPage() {
                 Page Not Found
               </h1>
               <p className="text-white/90 text-xl max-w-2xl mx-auto">
-                Oops! The page you're looking for seems to have wandered off our shelves.
-                Don't worry, let's get you back to shopping!
+                Oops! The page you&apos;re looking for seems to have wandered off our shelves.
+                Don&apos;t worry, let&apos;s get you back to shopping!
               </p>
             </div>
           </div>
@@ -31,7 +31,7 @@ export default function NotFoundPage() {
             <div className="mb-12">
               <div className="text-8xl mb-4">🛍️</div>
               <p className="text-gray-600 text-lg">
-                Our virtual shopping assistant couldn't find what you were looking for.
+                Our virtual shopping assistant couldn&apos;t find what you were looking for.
               </p>
             </div>
 
