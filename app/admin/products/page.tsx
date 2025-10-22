@@ -198,12 +198,6 @@ export default function AdminProductsPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Only allow submission on the final step
-    if (currentStep !== 3) {
-      return;
-    }
 
     setUploading(true);
     try {
@@ -494,7 +488,12 @@ export default function AdminProductsPage() {
                 </div>
               </DialogHeader>
 
-              <form onSubmit={handleSubmit} onKeyDown={(e) => {
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (currentStep === 3) {
+                  handleSubmit(e);
+                }
+              }} onKeyDown={(e) => {
                 if (e.key === 'Enter' && currentStep !== 3) {
                   e.preventDefault();
                 }
@@ -859,7 +858,7 @@ export default function AdminProductsPage() {
                         Next Step
                       </Button>
                     ) : (
-                      <Button type="submit" disabled={uploading} className="bg-amber-600 hover:bg-amber-700">
+                      <Button type="button" disabled={uploading} onClick={() => handleSubmit(new Event('submit') as any)} className="bg-amber-600 hover:bg-amber-700">
                         {uploading ? 'Creating Product...' : (editingProduct ? 'Update' : 'Create') + ' Product'}
                       </Button>
                     )}
