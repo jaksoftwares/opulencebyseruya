@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Edit, Trash2, FolderOpen } from 'lucide-react';
+import { Plus, Edit, Trash2, FolderOpen, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -51,9 +51,11 @@ export default function AdminCategoriesPage() {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [subcategoryDialogOpen, setSubcategoryDialogOpen] = useState(false);
+  const [viewCategoryDialogOpen, setViewCategoryDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
   const [selectedCategoryForSubcategories, setSelectedCategoryForSubcategories] = useState<Category | null>(null);
+  const [viewingCategory, setViewingCategory] = useState<Category | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -174,9 +176,15 @@ export default function AdminCategoriesPage() {
       });
       if (!res.ok) throw new Error(await res.text());
       toast({ title: editingCategory ? 'Category updated successfully' : 'Category created successfully' });
+
+      // Close dialog and reset form
       setDialogOpen(false);
       resetForm();
-      fetchCategories();
+
+      // Refresh data after a short delay to ensure database consistency
+      setTimeout(() => {
+        fetchCategories();
+      }, 500);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -203,6 +211,11 @@ export default function AdminCategoriesPage() {
     setSubcategoryDialogOpen(true);
   };
 
+  const handleViewCategory = (category: Category) => {
+    setViewingCategory(category);
+    setViewCategoryDialogOpen(true);
+  };
+
   const handleEditSubcategory = (subcategory: Subcategory) => {
     setEditingSubcategory(subcategory);
     setSubcategoryFormData({
@@ -225,8 +238,12 @@ export default function AdminCategoriesPage() {
       });
       if (!res.ok) throw new Error(await res.text());
       toast({ title: 'Category deleted successfully' });
-      fetchCategories();
-      fetchSubcategories();
+
+      // Refresh data after a short delay to ensure database consistency
+      setTimeout(() => {
+        fetchCategories();
+        fetchSubcategories();
+      }, 500);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -262,9 +279,15 @@ export default function AdminCategoriesPage() {
       toast({
         title: editingSubcategory ? 'Subcategory updated successfully' : 'Subcategory created successfully'
       });
+
+      // Close dialog and reset form
       setSubcategoryDialogOpen(false);
       resetSubcategoryForm();
-      fetchSubcategories();
+
+      // Refresh data after a short delay to ensure database consistency
+      setTimeout(() => {
+        fetchSubcategories();
+      }, 500);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -285,7 +308,11 @@ export default function AdminCategoriesPage() {
       });
       if (!res.ok) throw new Error(await res.text());
       toast({ title: 'Subcategory deleted successfully' });
-      fetchSubcategories();
+
+      // Refresh data after a short delay to ensure database consistency
+      setTimeout(() => {
+        fetchSubcategories();
+      }, 500);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -502,6 +529,14 @@ export default function AdminCategoriesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleViewCategory(category)}
+                            title="View category details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleManageSubcategories(category)}
                             title="Manage subcategories"
                           >
@@ -511,6 +546,7 @@ export default function AdminCategoriesPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleEdit(category)}
+                            title="Edit category"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -519,6 +555,7 @@ export default function AdminCategoriesPage() {
                             size="icon"
                             onClick={() => handleDelete(category.id)}
                             className="text-red-600 hover:text-red-700"
+                            title="Delete category"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -663,6 +700,101 @@ export default function AdminCategoriesPage() {
                       </Button>
                     </div>
                   </form>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Category View Dialog */}
+        <Dialog open={viewCategoryDialogOpen} onOpenChange={setViewCategoryDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">Category Details</DialogTitle>
+            </DialogHeader>
+            {viewingCategory && (
+              <div className="space-y-6">
+                {/* Category Image */}
+                {viewingCategory.image_url && (
+                  <div className="flex justify-center">
+                    <img
+                      src={viewingCategory.image_url}
+                      alt={viewingCategory.name}
+                      className="w-48 h-48 object-cover rounded-lg border"
+                    />
+                  </div>
+                )}
+
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-4">Basic Information</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-gray-600">Category Name</p>
+                        <p className="font-medium">{viewingCategory.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Slug</p>
+                        <p className="font-mono">{viewingCategory.slug}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Description</p>
+                        <p className="text-sm">{viewingCategory.description || 'No description'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Display Order</p>
+                        <p className="font-medium">{viewingCategory.display_order}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Status</p>
+                        <Badge variant={viewingCategory.is_active ? 'default' : 'secondary'}>
+                          {viewingCategory.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-lg mb-4">Subcategories</h3>
+                    <div className="space-y-3">
+                      {subcategories.filter(sc => sc.category_id === viewingCategory.id).length > 0 ? (
+                        subcategories.filter(sc => sc.category_id === viewingCategory.id).map((subcategory) => (
+                          <div key={subcategory.id} className="p-3 border rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">{subcategory.name}</p>
+                                <p className="text-sm text-gray-600">Slug: {subcategory.slug}</p>
+                                {subcategory.description && (
+                                  <p className="text-sm text-gray-500 mt-1">{subcategory.description}</p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <Badge variant={subcategory.is_active ? 'default' : 'secondary'} className="text-xs">
+                                  {subcategory.is_active ? 'Active' : 'Inactive'}
+                                </Badge>
+                                <p className="text-xs text-gray-500 mt-1">Order: {subcategory.display_order}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No subcategories found for this category.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metadata */}
+                <div className="border-t pt-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                    <div>
+                      <p>Created: {new Date(viewingCategory.created_at || '').toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p>Last Updated: {new Date(viewingCategory.updated_at || '').toLocaleDateString()}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
