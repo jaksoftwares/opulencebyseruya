@@ -30,20 +30,28 @@ import { useToast } from '@/hooks/use-toast';
 interface Payment {
   id: string;
   order_id: string;
-  amount: number;
-  phone_number: string;
-  transaction_id?: string;
   merchant_request_id?: string;
   checkout_request_id?: string;
-  status: string;
   response_code?: string;
   response_description?: string;
+  customer_message?: string;
+  result_code?: string;
+  result_desc?: string;
+  callback_metadata?: any;
+  mpesa_receipt_number?: string;
+  transaction_date?: string;
+  phone_number: string;
+  amount: number;
+  status: string;
+  payment_method?: string;
   created_at: string;
   updated_at: string;
-  order?: {
-    order_number: string;
-    customer_name: string;
-    customer_email: string;
+  customer_id?: string;
+  order_number?: string;
+  users?: {
+    full_name: string;
+    email: string;
+    phone?: string;
   };
 }
 
@@ -51,7 +59,7 @@ export default function AdminPaymentsPage() {
   const router = useRouter();
   const { isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
@@ -59,17 +67,6 @@ export default function AdminPaymentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
-
-  useEffect(() => {
-    if (!authLoading) {
-      if (!isAdmin) {
-        router.push('/login');
-        return;
-      } else {
-        fetchPayments();
-      }
-    }
-  }, [isAdmin, authLoading, router]);
 
   const fetchPayments = async (isRefresh = false) => {
     try {
@@ -80,56 +77,14 @@ export default function AdminPaymentsPage() {
         setLoading(true);
       }
 
-      // Create admin client to bypass RLS
-      const { createClient } = await import('@supabase/supabase-js');
-
-      const supabaseUrl = 'https://emgrqgsvjcdfqdvojizt.supabase.co';
-      const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtZ3JxZ3N2amNkZnFkdm9qaXp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTgxMDc5MywiZXhwIjoyMDc1Mzg2NzkzfQ.a_EbEfIOpz_S5x39XIJk0NPgFSYYMPu69_UoIrG7VIE';
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        console.error('Missing Supabase environment variables');
-        toast({
-          title: 'Configuration Error',
-          description: 'Missing Supabase configuration. Please check environment variables.',
-          variant: 'destructive',
-        });
-        return;
+      const response = await fetch('/api/admin/payments');
+      if (!response.ok) {
+        throw new Error('Failed to fetch payments');
       }
 
-      const supabaseAdmin = createClient(
-        supabaseUrl,
-        supabaseServiceKey,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
-          }
-        }
-      );
-
-      const { data, error } = await supabaseAdmin
-        .from('payments')
-        .select(`
-          *,
-          orders (
-            order_number,
-            customer_name,
-            customer_email
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching payments:', error);
-        toast({
-          title: 'Error loading payments',
-          description: 'Failed to load payments. Please try again.',
-          variant: 'destructive',
-        });
-      } else {
-        console.log('Payments fetched successfully:', data?.length || 0, 'payments');
-        setPayments(data || []);
-      }
+      const data = await response.json();
+      console.log('Payments fetched successfully:', data?.length || 0, 'payments');
+      setPayments(data || []);
     } catch (error) {
       console.error('Error fetching payments:', error);
       toast({
@@ -143,6 +98,12 @@ export default function AdminPaymentsPage() {
     }
   };
 
+  useEffect(() => {
+    if (!authLoading && isAdmin) {
+      fetchPayments();
+    }
+  }, [isAdmin, authLoading]);
+
   const handleViewPayment = (payment: Payment) => {
     setSelectedPayment(payment);
     setDialogOpen(true);
@@ -154,37 +115,21 @@ export default function AdminPaymentsPage() {
 
   const handleStatusUpdate = async (paymentId: string, newStatus: string) => {
     try {
-      // Create admin client to bypass RLS for updates
-      const { createClient } = await import('@supabase/supabase-js');
-
-      const supabaseUrl = 'https://emgrqgsvjcdfqdvojizt.supabase.co';
-      const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtZ3JxZ3N2amNkZnFkdm9qaXp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTgxMDc5MywiZXhwIjoyMDc1Mzg2NzkzfQ.a_EbEfIOpz_S5x39XIJk0NPgFSYYMPu69_UoIrG7VIE';
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        console.error('Missing Supabase environment variables');
-        return;
-      }
-
-      const supabaseAdmin = createClient(
-        supabaseUrl,
-        supabaseServiceKey,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
-          }
-        }
-      );
-
-      const { error } = await supabaseAdmin
-        .from('payments')
-        .update({
+      const response = await fetch('/api/admin/payments', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: paymentId,
           status: newStatus,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', paymentId);
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to update payment status');
+      }
 
       toast({
         title: 'Payment status updated',
@@ -238,9 +183,10 @@ export default function AdminPaymentsPage() {
   // Filter payments based on search and filters
   const filteredPayments = payments.filter(payment => {
     const matchesSearch =
-      payment.transaction_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.order?.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.mpesa_receipt_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.users?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.users?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.phone_number.includes(searchTerm);
 
     const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
@@ -267,7 +213,7 @@ export default function AdminPaymentsPage() {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AdminNav />
@@ -284,15 +230,25 @@ export default function AdminPaymentsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="font-serif text-3xl font-bold text-gray-900">Payments</h1>
-          <Button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => fetchPayments(false)}
+              disabled={loading}
+              variant="default"
+              className="flex items-center gap-2"
+            >
+              {loading ? 'Loading...' : 'Load Payments'}
+            </Button>
+            <Button
+              onClick={handleRefresh}
+              disabled={refreshing || payments.length === 0}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -305,7 +261,7 @@ export default function AdminPaymentsPage() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="search"
-                    placeholder="Transaction ID, Order #, Name..."
+                    placeholder="Receipt Number, Order #, Name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -363,7 +319,7 @@ export default function AdminPaymentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Transaction ID</TableHead>
+                  <TableHead>Receipt Number</TableHead>
                   <TableHead>Order #</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Amount</TableHead>
@@ -377,22 +333,22 @@ export default function AdminPaymentsPage() {
                 {filteredPayments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                      {payments.length === 0 ? 'No payments found' : 'No payments match your filters'}
+                      {loading ? 'Loading payments...' : payments.length === 0 ? 'No payments loaded. Click "Load Payments" to fetch payments.' : 'No payments match your filters'}
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredPayments.map((payment) => (
                     <TableRow key={payment.id} className="hover:bg-gray-50">
                       <TableCell className="font-mono text-sm">
-                        {payment.transaction_id || 'N/A'}
+                        {payment.mpesa_receipt_number || 'N/A'}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {payment.order?.order_number || 'N/A'}
+                        {payment.order_number || 'N/A'}
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{payment.order?.customer_name || 'N/A'}</div>
-                          <div className="text-sm text-gray-500">{payment.order?.customer_email || ''}</div>
+                          <div className="font-medium">{payment.users?.full_name || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">{payment.users?.email || ''}</div>
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
@@ -476,13 +432,13 @@ export default function AdminPaymentsPage() {
                 </div>
 
                 {/* Order Information */}
-                {selectedPayment.order && (
+                {(selectedPayment.order_number || selectedPayment.users) && (
                   <div>
                     <h3 className="font-semibold text-sm text-gray-600 mb-2">Order Information</h3>
                     <div className="space-y-1 text-sm bg-gray-50 p-4 rounded-lg">
-                      <p><span className="font-medium">Order Number:</span> {selectedPayment.order.order_number}</p>
-                      <p><span className="font-medium">Customer:</span> {selectedPayment.order.customer_name}</p>
-                      <p><span className="font-medium">Email:</span> {selectedPayment.order.customer_email}</p>
+                      <p><span className="font-medium">Order Number:</span> {selectedPayment.order_number || 'N/A'}</p>
+                      <p><span className="font-medium">Customer:</span> {selectedPayment.users?.full_name || 'N/A'}</p>
+                      <p><span className="font-medium">Email:</span> {selectedPayment.users?.email || 'N/A'}</p>
                     </div>
                   </div>
                 )}
@@ -493,9 +449,9 @@ export default function AdminPaymentsPage() {
                   <div className="space-y-3 bg-blue-50 p-4 rounded-lg">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-gray-600 font-medium">Transaction ID</p>
+                        <p className="text-xs text-gray-600 font-medium">M-Pesa Receipt Number</p>
                         <p className="font-mono text-sm text-gray-900">
-                          {selectedPayment.transaction_id || 'N/A'}
+                          {selectedPayment.mpesa_receipt_number || 'N/A'}
                         </p>
                       </div>
                       <div>
@@ -503,30 +459,52 @@ export default function AdminPaymentsPage() {
                         <p className="text-sm text-gray-900">{selectedPayment.phone_number}</p>
                       </div>
                       <div>
+                        <p className="text-xs text-gray-600 font-medium">Transaction Date</p>
+                        <p className="text-sm text-gray-900">
+                          {selectedPayment.transaction_date ? new Date(selectedPayment.transaction_date).toLocaleString('en-KE') : 'N/A'}
+                        </p>
+                      </div>
+                      <div>
                         <p className="text-xs text-gray-600 font-medium">Merchant Request ID</p>
                         <p className="font-mono text-xs text-gray-700 break-all">
                           {selectedPayment.merchant_request_id || 'N/A'}
                         </p>
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-xs text-gray-600 font-medium">Checkout Request ID</p>
                         <p className="font-mono text-xs text-gray-700 break-all">
                           {selectedPayment.checkout_request_id || 'N/A'}
                         </p>
                       </div>
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Result Code</p>
+                        <p className="text-sm text-gray-900">{selectedPayment.result_code || 'N/A'}</p>
+                      </div>
                     </div>
 
-                    {selectedPayment.response_code && (
+                    {selectedPayment.result_desc && (
                       <div>
-                        <p className="text-xs text-gray-600 font-medium">Response Code</p>
-                        <p className="text-sm text-gray-700">{selectedPayment.response_code}</p>
+                        <p className="text-xs text-gray-600 font-medium">Result Description</p>
+                        <p className="text-sm text-gray-700">{selectedPayment.result_desc}</p>
                       </div>
                     )}
 
-                    {selectedPayment.response_description && (
+                    {selectedPayment.customer_message && (
                       <div>
-                        <p className="text-xs text-gray-600 font-medium">Response Description</p>
-                        <p className="text-sm text-gray-700">{selectedPayment.response_description}</p>
+                        <p className="text-xs text-gray-600 font-medium">Customer Message</p>
+                        <p className="text-sm text-gray-700">{selectedPayment.customer_message}</p>
+                      </div>
+                    )}
+
+                    {selectedPayment.callback_metadata && (
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Callback Metadata</p>
+                        <pre className="text-xs text-gray-700 bg-gray-100 p-2 rounded mt-1 overflow-x-auto">
+                          {JSON.stringify(selectedPayment.callback_metadata, null, 2)}
+                        </pre>
                       </div>
                     )}
 

@@ -47,6 +47,13 @@ interface Payment {
   status: string;
   response_code?: string;
   response_description?: string;
+  customer_message?: string;
+  result_code?: string;
+  result_desc?: string;
+  callback_metadata?: any;
+  mpesa_receipt_number?: string;
+  transaction_date?: string;
+  payment_method?: string;
   created_at: string;
   updated_at: string;
 }
@@ -62,7 +69,7 @@ export default function AdminOrdersPage() {
   const router = useRouter();
   const { isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -74,9 +81,8 @@ export default function AdminOrdersPage() {
       if (!isAdmin) {
         router.push('/login');
         return;
-      } else {
-        fetchOrders();
       }
+      fetchOrders();
     }
   }, [isAdmin, authLoading, router]);
 
@@ -89,95 +95,14 @@ export default function AdminOrdersPage() {
         setLoading(true);
       }
 
-      // Create admin client to bypass RLS
-      const { createClient } = await import('@supabase/supabase-js');
-
-      // Environment variables are available at build time, but let's check them
-      const supabaseUrl = 'https://emgrqgsvjcdfqdvojizt.supabase.co';
-      const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtZ3JxZ3N2amNkZnFkdm9qaXp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTgxMDc5MywiZXhwIjoyMDc1Mzg2NzkzfQ.a_EbEfIOpz_S5x39XIJk0NPgFSYYMPu69_UoIrG7VIE';
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        console.error('Missing Supabase environment variables');
-        toast({
-          title: 'Configuration Error',
-          description: 'Missing Supabase configuration. Please check environment variables.',
-          variant: 'destructive',
-        });
-        return;
+      const response = await fetch('/api/admin/orders');
+      if (!response.ok) {
+        throw new Error('Failed to fetch orders');
       }
 
-      const supabaseAdmin = createClient(
-        supabaseUrl,
-        supabaseServiceKey,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
-          }
-        }
-      );
-
-      const { data, error } = await supabaseAdmin
-        .from('orders')
-        .select(`
-          id,
-          order_number,
-          customer_id,
-          customer_name,
-          customer_email,
-          customer_phone,
-          delivery_address,
-          delivery_city,
-          delivery_method,
-          delivery_county,
-          subtotal,
-          delivery_fee,
-          total,
-          status,
-          payment_method,
-          payment_status,
-          notes,
-          created_at,
-          updated_at,
-          order_items (
-            id,
-            order_id,
-            product_id,
-            product_name,
-            product_sku,
-            quantity,
-            unit_price,
-            total_price,
-            created_at
-          ),
-          payments (
-            id,
-            order_id,
-            amount,
-            phone_number,
-            transaction_id,
-            merchant_request_id,
-            checkout_request_id,
-            status,
-            response_code,
-            response_description,
-            created_at,
-            updated_at
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching orders:', error);
-        toast({
-          title: 'Error loading orders',
-          description: 'Failed to load orders. Please try again.',
-          variant: 'destructive',
-        });
-      } else {
-        console.log('Orders fetched successfully:', data?.length || 0, 'orders');
-        setOrders(data || []);
-      }
+      const data = await response.json();
+      console.log('Orders fetched successfully:', data?.length || 0, 'orders');
+      setOrders(data || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -215,43 +140,21 @@ export default function AdminOrdersPage() {
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
-      // Create admin client to bypass RLS for updates
-      const { createClient } = await import('@supabase/supabase-js');
-
-      // Environment variables are available at build time, but let's check them
-      const supabaseUrl = 'https://emgrqgsvjcdfqdvojizt.supabase.co';
-      const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtZ3JxZ3N2amNkZnFkdm9qaXp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTgxMDc5MywiZXhwIjoyMDc1Mzg2NzkzfQ.a_EbEfIOpz_S5x39XIJk0NPgFSYYMPu69_UoIrG7VIE';
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        console.error('Missing Supabase environment variables');
-        toast({
-          title: 'Configuration Error',
-          description: 'Missing Supabase configuration. Please check environment variables.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const supabaseAdmin = createClient(
-        supabaseUrl,
-        supabaseServiceKey,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
-          }
-        }
-      );
-
-      const { error } = await supabaseAdmin
-        .from('orders')
-        .update({
+      const response = await fetch('/api/admin/orders', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: orderId,
           status: newStatus,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to update order status');
+      }
 
       toast({
         title: 'Order status updated',
@@ -308,7 +211,7 @@ export default function AdminOrdersPage() {
     }
   };
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AdminNav />
@@ -354,7 +257,7 @@ export default function AdminOrdersPage() {
                 {orders.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                      No orders found
+                      {loading ? 'Loading orders...' : 'No orders found.'}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -481,9 +384,9 @@ export default function AdminOrdersPage() {
                     <div className="bg-blue-50 p-4 rounded-lg space-y-3">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <p className="text-xs text-gray-600 font-medium">Transaction ID</p>
+                          <p className="text-xs text-gray-600 font-medium">M-Pesa Receipt Number</p>
                           <p className="font-mono text-sm text-gray-900">
-                            {selectedOrder.payment.transaction_id || 'N/A'}
+                            {selectedOrder.payment.mpesa_receipt_number || 'N/A'}
                           </p>
                         </div>
                         <div>
@@ -516,10 +419,26 @@ export default function AdminOrdersPage() {
                         </div>
                       )}
 
-                      {selectedOrder.payment.response_description && (
+                      {selectedOrder.payment.transaction_date && (
                         <div>
-                          <p className="text-xs text-gray-600 font-medium">Response</p>
-                          <p className="text-sm text-gray-700">{selectedOrder.payment.response_description}</p>
+                          <p className="text-xs text-gray-600 font-medium">Transaction Date</p>
+                          <p className="text-sm text-gray-700">
+                            {new Date(selectedOrder.payment.transaction_date).toLocaleString('en-KE')}
+                          </p>
+                        </div>
+                      )}
+
+                      {selectedOrder.payment.result_desc && (
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Result Description</p>
+                          <p className="text-sm text-gray-700">{selectedOrder.payment.result_desc}</p>
+                        </div>
+                      )}
+
+                      {selectedOrder.payment.customer_message && (
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Customer Message</p>
+                          <p className="text-sm text-gray-700">{selectedOrder.payment.customer_message}</p>
                         </div>
                       )}
 
