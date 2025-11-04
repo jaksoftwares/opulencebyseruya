@@ -9,6 +9,8 @@ interface OrderEmailData {
   customerPhone: string;
   deliveryAddress: string;
   deliveryCity: string;
+  deliveryMethod?: string;
+  deliveryCounty?: string;
   paymentMethod: string;
   subtotal: number;
   deliveryFee: number;
@@ -26,7 +28,7 @@ export async function sendOrderNotificationEmail(orderData: OrderEmailData) {
   try {
     const { data, error } = await resend.emails.send({
       from: 'Opulence by Seruya <orders@opulencebyseruya.co.ke>',
-      to: ['opulencebyseruya@gmail.com'],
+      to: ['opulenceseruya@gmail.com'],
       subject: `New Order Received - ${orderData.orderNumber}`,
       html: generateOrderEmailHTML(orderData),
     });
@@ -136,10 +138,16 @@ function generateOrderEmailHTML(order: OrderEmailData): string {
           <h2 style="margin: 0 0 15px 0; color: #1f2937; font-size: 20px;">📍 Delivery Information</h2>
           <div style="background: #f8fafc; padding: 20px; border-radius: 8px;">
             <div>
+              <strong style="color: #374151;">Delivery Method:</strong><br>
+              <span style="text-transform: capitalize;">${order.deliveryMethod || 'Delivery'}</span>
+            </div>
+            ${order.deliveryMethod === 'delivery' ? `
+            <div style="margin-top: 10px;">
               <strong style="color: #374151;">Delivery Address:</strong><br>
               ${order.deliveryAddress}<br>
-              ${order.deliveryCity}
+              ${order.deliveryCity}${order.deliveryCounty ? `, ${order.deliveryCounty}` : ''}
             </div>
+            ` : ''}
             ${order.notes ? `
             <div style="margin-top: 15px;">
               <strong style="color: #374151;">Order Notes:</strong><br>
@@ -259,10 +267,16 @@ function generateCustomerOrderEmailHTML(order: OrderEmailData): string {
           <h2 style="margin: 0 0 15px 0; color: #1f2937; font-size: 20px;">📍 Delivery Information</h2>
           <div style="background: #f8fafc; padding: 20px; border-radius: 8px;">
             <div>
+              <strong style="color: #374151;">Delivery Method:</strong><br>
+              <span style="text-transform: capitalize;">${order.deliveryMethod || 'Delivery'}</span>
+            </div>
+            ${order.deliveryMethod === 'delivery' ? `
+            <div style="margin-top: 10px;">
               <strong style="color: #374151;">Delivery Address:</strong><br>
               ${order.deliveryAddress}<br>
-              ${order.deliveryCity}
+              ${order.deliveryCity}${order.deliveryCounty ? `, ${order.deliveryCounty}` : ''}
             </div>
+            ` : ''}
             ${order.notes ? `
             <div style="margin-top: 15px;">
               <strong style="color: #374151;">Order Notes:</strong><br>

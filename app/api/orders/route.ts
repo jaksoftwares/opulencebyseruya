@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
       customer_phone,
       delivery_address,
       delivery_city,
+      delivery_method,
+      delivery_county,
       subtotal,
       delivery_fee,
       total,
@@ -76,6 +78,8 @@ export async function POST(request: NextRequest) {
       customer_phone,
       delivery_address,
       delivery_city,
+      delivery_method,
+      delivery_county,
       subtotal: parseFloat(subtotal),
       delivery_fee: parseFloat(delivery_fee),
       total: parseFloat(total),
@@ -135,6 +139,8 @@ export async function POST(request: NextRequest) {
         customerPhone: order.customer_phone,
         deliveryAddress: order.delivery_address,
         deliveryCity: order.delivery_city,
+        deliveryMethod: order.delivery_method,
+        deliveryCounty: order.delivery_county,
         paymentMethod: order.payment_method,
         subtotal: order.subtotal,
         deliveryFee: order.delivery_fee,
@@ -162,6 +168,8 @@ export async function POST(request: NextRequest) {
         customerPhone: order.customer_phone,
         deliveryAddress: order.delivery_address,
         deliveryCity: order.delivery_city,
+        deliveryMethod: order.delivery_method,
+        deliveryCounty: order.delivery_county,
         paymentMethod: order.payment_method,
         subtotal: order.subtotal,
         deliveryFee: order.delivery_fee,
@@ -215,6 +223,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get('customer_id');
+    const orderId = searchParams.get('order_id');
 
     if (!customerId) {
       return NextResponse.json(
@@ -225,12 +234,13 @@ export async function GET(request: NextRequest) {
 
     console.log('Fetching orders for customer ID:', customerId);
 
-    const { data: orders, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('orders')
       .select(`
         *,
         order_items (
           product_name,
+          product_sku,
           quantity,
           unit_price,
           total_price
@@ -239,12 +249,32 @@ export async function GET(request: NextRequest) {
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false });
 
+    // If order_id is provided, fetch specific order
+    if (orderId) {
+      query = query.eq('id', orderId);
+    }
+
+    const { data: orders, error } = await query;
+
     if (error) {
       console.error('Orders fetch error:', error);
       return NextResponse.json(
         { error: 'Failed to fetch orders' },
         { status: 500 }
       );
+    }
+
+    // If fetching specific order, return single order object
+    if (orderId) {
+      const order = orders?.[0];
+      if (!order) {
+        return NextResponse.json(
+          { error: 'Order not found' },
+          { status: 404 }
+        );
+      }
+      console.log('Order fetched successfully:', order.order_number);
+      return NextResponse.json({ order });
     }
 
     console.log('Orders fetched successfully:', orders?.length || 0, 'orders');

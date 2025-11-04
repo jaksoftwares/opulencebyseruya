@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, User, Mail, Phone, Save, Package, Eye, CreditCard, Truck, CheckCircle, Clock, XCircle } from 'lucide-react';
@@ -39,6 +40,10 @@ export default function ProfilePage() {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+  const [paymentPhoneNumber, setPaymentPhoneNumber] = useState('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -123,11 +128,63 @@ export default function ProfilePage() {
   };
 
   const handleCompletePayment = async (orderId: string) => {
-    // For now, show a message that payment completion will be implemented
-    toast({
-      title: 'Payment Completion',
-      description: 'Online payment completion will be available soon. Please contact us via WhatsApp for now.',
-    });
+    setPaymentOrderId(orderId);
+    setPaymentPhoneNumber(customer?.phone || '');
+    setShowPaymentDialog(true);
+  };
+
+  const handlePaymentSubmit = async () => {
+    if (!paymentOrderId || !paymentPhoneNumber) {
+      toast({
+        title: 'Error',
+        description: 'Please enter your phone number for payment.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setPaymentLoading(true);
+
+    try {
+      const response = await fetch('/api/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: paymentOrderId,
+          phoneNumber: paymentPhoneNumber,
+          amount: orders.find(o => o.id === paymentOrderId)?.total || 0,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to initiate payment');
+      }
+
+      toast({
+        title: 'Payment initiated!',
+        description: result.message || 'Please check your phone for the M-Pesa prompt.',
+      });
+
+      setShowPaymentDialog(false);
+      setPaymentOrderId(null);
+
+      // Refresh orders to show updated payment status
+      fetchUserOrders();
+
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast({
+        title: 'Payment failed',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -363,9 +420,14 @@ export default function ProfilePage() {
                           <div className="flex justify-between items-center">
                             <div className="text-sm text-gray-600">
                               <span className="capitalize">{order.payment_method.replace('_', ' ')}</span>
-                              {order.payment_status === 'pending' && order.payment_method === 'mpesa' && (
+                              {order.payment_status === 'pending' && (
                                 <Badge variant="outline" className="ml-2 text-xs">
                                   Payment Pending
+                                </Badge>
+                              )}
+                              {order.payment_status === 'completed' && (
+                                <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-700 border-green-200">
+                                  Payment Completed
                                 </Badge>
                               )}
                             </div>
@@ -373,12 +435,12 @@ export default function ProfilePage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setSelectedOrder(order)}
+                                onClick={() => router.push(`/orders/${order.id}`)}
                               >
                                 <Eye className="h-4 w-4 mr-1" />
                                 View Details
                               </Button>
-                              {order.payment_status === 'pending' && order.payment_method === 'mpesa' && (
+                              {order.payment_status === 'pending' && (
                                 <Button
                                   size="sm"
                                   onClick={() => handleCompletePayment(order.id)}
@@ -463,6 +525,61 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Payment Dialog */}
+            <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Complete Payment</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Complete your payment for order #{orders.find(o => o.id === paymentOrderId)?.order_number}.
+                  </p>
+
+                  <div>
+                    <Label htmlFor="paymentPhone">M-Pesa Phone Number *</Label>
+                    <Input
+                      id="paymentPhone"
+                      type="tel"
+                      value={paymentPhoneNumber}
+                      onChange={(e) => setPaymentPhoneNumber(e.target.value)}
+                      placeholder="0712345678 or +254712345678"
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-blue-900 mb-2">
+                      Payment Amount: KES {orders.find(o => o.id === paymentOrderId)?.total.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-blue-700">
+                      You will receive an M-Pesa prompt on your phone to complete the payment.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowPaymentDialog(false);
+                        setPaymentOrderId(null);
+                      }}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handlePaymentSubmit}
+                      disabled={paymentLoading || !paymentPhoneNumber}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      {paymentLoading ? 'Processing...' : 'Pay Now'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </div>

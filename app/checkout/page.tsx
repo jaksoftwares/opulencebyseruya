@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +25,11 @@ export default function CheckoutPage() {
 
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('pay_on_delivery');
+  const [deliveryMethod, setDeliveryMethod] = useState('delivery');
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentPhoneNumber, setPaymentPhoneNumber] = useState('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -33,7 +39,22 @@ export default function CheckoutPage() {
     notes: '',
   });
 
-  const deliveryFee = cartTotal >= 5000 ? 0 : 300;
+  // Calculate delivery fee based on delivery method and address
+  const calculateDeliveryFee = () => {
+    if (deliveryMethod === 'pickup') return 0;
+
+    // Extract county from address or city field (user enters it manually)
+    const addressText = (formData.address + ' ' + formData.city).toLowerCase();
+
+    // Nairobi and surrounding counties: KES 300
+    const nairobiArea = ['nairobi', 'kiambu', 'machakos', 'kajiado', 'murang\'a', 'nyeri', 'kirinyaga', 'embu'];
+    if (nairobiArea.some(county => addressText.includes(county))) return 300;
+
+    // Other counties: KES 500
+    return 500;
+  };
+
+  const deliveryFee = calculateDeliveryFee();
   const total = cartTotal + deliveryFee;
 
   useEffect(() => {
@@ -65,14 +86,74 @@ export default function CheckoutPage() {
         city: '',
         notes: '',
       });
+      // Pre-fill payment phone number with customer phone for M-Pesa payments
+      if (customer.phone) {
+        setPaymentPhoneNumber(customer.phone);
+      }
     }
   }, [customer]);
+
+  // Show phone number field when M-Pesa is selected
+  const showPhoneField = paymentMethod === 'mpesa';
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handlePayment = async () => {
+    if (!currentOrderId || !paymentPhoneNumber) {
+      toast({
+        title: 'Error',
+        description: 'Please enter your phone number for payment.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setPaymentLoading(true);
+
+    try {
+      const response = await fetch('/api/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: currentOrderId,
+          phoneNumber: paymentPhoneNumber,
+          amount: total,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to initiate payment');
+      }
+
+      toast({
+        title: 'Payment initiated!',
+        description: result.message || 'Please check your phone for the M-Pesa prompt.',
+      });
+
+      // Close dialog and redirect to success page
+      setShowPaymentDialog(false);
+      router.push(`/order-success?orderNumber=${result.orderNumber || 'Unknown'}&orderId=${currentOrderId}`);
+
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast({
+        title: 'Payment failed',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,7 +173,7 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // Use API endpoint for order creation
+      // Create order for all payment methods
       const orderData = {
         customer_id: customer?.id,
         customer_name: formData.fullName,
@@ -100,6 +181,8 @@ export default function CheckoutPage() {
         customer_phone: formData.phone,
         delivery_address: formData.address,
         delivery_city: formData.city,
+        delivery_method: deliveryMethod,
+        delivery_county: formData.city, // Use city field as county since user enters it manually
         subtotal: cartTotal,
         delivery_fee: deliveryFee,
         total: total,
@@ -109,9 +192,7 @@ export default function CheckoutPage() {
         items: cart,
       };
 
-      console.log('Sending order data:', orderData);
-      console.log('User ID from context:', user?.id);
-      console.log('Customer ID from context:', customer?.id);
+      console.log('Creating order:', orderData);
 
       const response = await fetch('/api/orders', {
         method: 'POST',
@@ -128,13 +209,16 @@ export default function CheckoutPage() {
       }
 
       clearCart();
+      setCurrentOrderId(result.order.id);
 
       toast({
         title: 'Order placed successfully!',
-        description: `Your order number is ${result.order.order_number}. We'll contact you shortly to confirm.`,
+        description: `Your order number is ${result.order.order_number}. You can complete payment online now or later.`,
       });
 
-      router.push(`/order-success?orderNumber=${result.order.order_number}&orderId=${result.order.id}`);
+      // Show payment dialog for all payment methods
+      setShowPaymentDialog(true);
+
     } catch (error) {
       console.error('Error placing order:', error);
       toast({
@@ -208,52 +292,87 @@ export default function CheckoutPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Delivery Information</CardTitle>
+                    <CardTitle>Delivery Method</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="address">Delivery Address *</Label>
-                      <Input
-                        id="address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        required
-                        placeholder="Street address, building, apartment"
-                      />
-                    </div>
+                    <RadioGroup value={deliveryMethod} onValueChange={setDeliveryMethod}>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="delivery" id="delivery" />
+                        <Label htmlFor="delivery" className="flex-1">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 cursor-pointer">
+                            <p className="font-medium text-blue-900 mb-2">Delivery</p>
+                            <p className="text-sm text-blue-700">
+                              We will deliver your order to your specified address.
+                            </p>
+                          </div>
+                        </Label>
+                      </div>
 
-                    <div>
-                      <Label htmlFor="city">City/Town *</Label>
-                      <Input
-                        id="city"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleChange}
-                        required
-                        placeholder="Nairobi"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="notes">Order Notes (Optional)</Label>
-                      <Textarea
-                        id="notes"
-                        name="notes"
-                        value={formData.notes}
-                        onChange={handleChange}
-                        placeholder="Any special instructions for delivery?"
-                        rows={3}
-                      />
-                    </div>
+                      <div className="flex items-center space-x-2 mt-4">
+                        <RadioGroupItem value="pickup" id="pickup" />
+                        <Label htmlFor="pickup" className="flex-1">
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4 cursor-pointer">
+                            <p className="font-medium text-green-900 mb-2">Pickup</p>
+                            <p className="text-sm text-green-700">
+                              Collect your order from our store location.
+                            </p>
+                          </div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </CardContent>
                 </Card>
+
+                {deliveryMethod === 'delivery' && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Delivery Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label htmlFor="address">Delivery Address *</Label>
+                        <Input
+                          id="address"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleChange}
+                          required={deliveryMethod === 'delivery'}
+                          placeholder="Street address, building, apartment"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="city">City/County *</Label>
+                        <Input
+                          id="city"
+                          name="city"
+                          value={formData.city}
+                          onChange={handleChange}
+                          required={deliveryMethod === 'delivery'}
+                          placeholder="e.g., Nairobi, Kiambu, Machakos"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="notes">Order Notes (Optional)</Label>
+                        <Textarea
+                          id="notes"
+                          name="notes"
+                          value={formData.notes}
+                          onChange={handleChange}
+                          placeholder="Any special instructions for delivery?"
+                          rows={3}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 <Card>
                   <CardHeader>
                     <CardTitle>Payment Method</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
                     <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="pay_on_delivery" id="pay_on_delivery" />
@@ -261,7 +380,19 @@ export default function CheckoutPage() {
                           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 cursor-pointer">
                             <p className="font-medium text-blue-900 mb-2">Pay on Delivery</p>
                             <p className="text-sm text-blue-700">
-                              Pay cash when your order is delivered to your doorstep.
+                              Pay cash when your order is delivered to your doorstep, or complete payment online after placing your order.
+                            </p>
+                          </div>
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2 mt-4">
+                        <RadioGroupItem value="pickup" id="pickup" />
+                        <Label htmlFor="pickup" className="flex-1">
+                          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 cursor-pointer">
+                            <p className="font-medium text-purple-900 mb-2">Pickup</p>
+                            <p className="text-sm text-purple-700">
+                              Collect your order from our store location. Pay cash upon pickup or complete payment online after placing your order.
                             </p>
                           </div>
                         </Label>
@@ -273,12 +404,13 @@ export default function CheckoutPage() {
                           <div className="bg-green-50 border border-green-200 rounded-lg p-4 cursor-pointer">
                             <p className="font-medium text-green-900 mb-2">M-Pesa Payment</p>
                             <p className="text-sm text-green-700">
-                              After placing your order, our team will contact you with M-Pesa payment instructions.
+                              Pay now using M-Pesa. You will receive a payment prompt on your phone before your order is confirmed.
                             </p>
                           </div>
                         </Label>
                       </div>
                     </RadioGroup>
+
                   </CardContent>
                 </Card>
               </div>
@@ -312,13 +444,7 @@ export default function CheckoutPage() {
 
                       <div className="flex justify-between text-gray-700">
                         <span>Delivery Fee</span>
-                        <span>
-                          {deliveryFee === 0 ? (
-                            <span className="text-green-600 font-medium">FREE</span>
-                          ) : (
-                            `KES ${deliveryFee.toLocaleString()}`
-                          )}
-                        </span>
+                        <span>KES {deliveryFee.toLocaleString()}</span>
                       </div>
                     </div>
 
@@ -346,6 +472,59 @@ export default function CheckoutPage() {
               </div>
             </div>
           </form>
+
+          {/* Payment Dialog for All Orders */}
+          <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Complete Payment Online</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Your order has been placed successfully! You can complete payment using M-Pesa now or later from your order history.
+                </p>
+
+                <div>
+                  <Label htmlFor="paymentPhone">M-Pesa Phone Number *</Label>
+                  <Input
+                    id="paymentPhone"
+                    type="tel"
+                    value={paymentPhoneNumber}
+                    onChange={(e) => setPaymentPhoneNumber(e.target.value)}
+                    placeholder="0712345678 or +254712345678"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-blue-900 mb-2">Payment Amount: KES {total.toLocaleString()}</p>
+                  <p className="text-xs text-blue-700">
+                    You will receive an M-Pesa prompt on your phone to complete the payment.
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                     setShowPaymentDialog(false);
+                     router.push('/profile');
+                   }}
+                    className="flex-1"
+                  >
+                    Complete Later
+                  </Button>
+                  <Button
+                    onClick={handlePayment}
+                    disabled={paymentLoading || !paymentPhoneNumber}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    {paymentLoading ? 'Processing...' : 'Pay Now'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
       <Footer />

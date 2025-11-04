@@ -77,6 +77,8 @@ export type Database = {
           customer_phone: string;
           delivery_address: string;
           delivery_city: string;
+          delivery_method: string;
+          delivery_county: string;
           subtotal: number;
           delivery_fee: number;
           total: number;

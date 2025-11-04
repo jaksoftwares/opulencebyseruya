@@ -12,7 +12,10 @@ import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, cartTotal } = useCart();
 
-  const deliveryFee = cartTotal >= 5000 ? 0 : 300;
+  // Note: This is a simplified calculation for cart display
+  // Actual delivery fee will be calculated in checkout based on delivery method and county
+  // Nairobi and surrounding areas: KES 300, Other counties: KES 500
+  const deliveryFee = 300; // Show minimum fee in cart
   const total = cartTotal + deliveryFee;
 
   if (cart.length === 0) {
@@ -132,21 +135,13 @@ export default function CartPage() {
                     </div>
 
                     <div className="flex justify-between text-gray-700">
-                      <span>Delivery Fee</span>
-                      <span>
-                        {deliveryFee === 0 ? (
-                          <span className="text-green-600 font-medium">FREE</span>
-                        ) : (
-                          `KES ${deliveryFee.toLocaleString()}`
-                        )}
-                      </span>
+                      <span>Delivery Fee (from)</span>
+                      <span>KES {deliveryFee.toLocaleString()}</span>
                     </div>
 
-                    {cartTotal < 5000 && cartTotal > 0 && (
-                      <p className="text-xs text-amber-600">
-                        Add KES {(5000 - cartTotal).toLocaleString()} more for free delivery
-                      </p>
-                    )}
+                    <p className="text-xs text-gray-500">
+                      Final delivery fee will be calculated at checkout based on your delivery method and county
+                    </p>
                   </div>
 
                   <Separator />
