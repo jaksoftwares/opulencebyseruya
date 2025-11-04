@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, Phone, RefreshCw, Truck, CheckCircle, XCircle, Clock, Package } from 'lucide-react';
+import { Eye, Phone, RefreshCw, Truck, CheckCircle, XCircle, Clock, Package, CreditCard, DollarSign } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -22,12 +22,33 @@ interface Order {
   customer_email: string;
   delivery_address: string;
   delivery_city: string;
+  delivery_method: string;
+  delivery_county: string;
   total: number;
+  subtotal: number;
+  delivery_fee: number;
   status: string;
   payment_status: string;
   payment_method: string;
   created_at: string;
+  notes?: string;
   order_items?: OrderItem[];
+  payment?: Payment;
+}
+
+interface Payment {
+  id: string;
+  order_id: string;
+  amount: number;
+  phone_number: string;
+  transaction_id?: string;
+  merchant_request_id?: string;
+  checkout_request_id?: string;
+  status: string;
+  response_code?: string;
+  response_description?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface OrderItem {
@@ -107,6 +128,8 @@ export default function AdminOrdersPage() {
           customer_phone,
           delivery_address,
           delivery_city,
+          delivery_method,
+          delivery_county,
           subtotal,
           delivery_fee,
           total,
@@ -126,6 +149,20 @@ export default function AdminOrdersPage() {
             unit_price,
             total_price,
             created_at
+          ),
+          payments (
+            id,
+            order_id,
+            amount,
+            phone_number,
+            transaction_id,
+            merchant_request_id,
+            checkout_request_id,
+            status,
+            response_code,
+            response_description,
+            created_at,
+            updated_at
           )
         `)
         .order('created_at', { ascending: false });
@@ -415,7 +452,7 @@ export default function AdminOrdersPage() {
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-sm text-gray-600 mb-1">Payment Method</h3>
                     <p className="text-gray-900 capitalize">{selectedOrder.payment_method.replace('_', ' ')}</p>
-                    <Badge variant={selectedOrder.payment_status === 'paid' ? 'default' : 'secondary'} className="mt-1">
+                    <Badge variant={selectedOrder.payment_status === 'completed' ? 'default' : 'secondary'} className="mt-1">
                       {selectedOrder.payment_status}
                     </Badge>
                   </div>
@@ -429,8 +466,97 @@ export default function AdminOrdersPage() {
                     <p><span className="font-medium">Phone:</span> {selectedOrder.customer_phone}</p>
                     <p><span className="font-medium">Address:</span> {selectedOrder.delivery_address}</p>
                     <p><span className="font-medium">City:</span> {selectedOrder.delivery_city}</p>
+                    <p><span className="font-medium">County:</span> {selectedOrder.delivery_county}</p>
+                    <p><span className="font-medium">Delivery Method:</span> {selectedOrder.delivery_method}</p>
                   </div>
                 </div>
+
+                {/* Payment Information */}
+                {selectedOrder.payment && (
+                  <div>
+                    <h3 className="font-semibold text-sm text-gray-600 mb-2 flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Payment Details
+                    </h3>
+                    <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Transaction ID</p>
+                          <p className="font-mono text-sm text-gray-900">
+                            {selectedOrder.payment.transaction_id || 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Amount</p>
+                          <p className="font-semibold text-gray-900">
+                            KES {selectedOrder.payment.amount.toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Phone Number</p>
+                          <p className="text-sm text-gray-900">{selectedOrder.payment.phone_number}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Payment Status</p>
+                          <Badge
+                            variant={selectedOrder.payment.status === 'completed' ? 'default' : 'secondary'}
+                            className="mt-1"
+                          >
+                            {selectedOrder.payment.status}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {selectedOrder.payment.checkout_request_id && (
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Checkout Request ID</p>
+                          <p className="font-mono text-xs text-gray-700 break-all">
+                            {selectedOrder.payment.checkout_request_id}
+                          </p>
+                        </div>
+                      )}
+
+                      {selectedOrder.payment.response_description && (
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Response</p>
+                          <p className="text-sm text-gray-700">{selectedOrder.payment.response_description}</p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-blue-200">
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Initiated</p>
+                          <p className="text-xs text-gray-600">
+                            {new Date(selectedOrder.payment.created_at).toLocaleString('en-KE')}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Last Updated</p>
+                          <p className="text-xs text-gray-600">
+                            {new Date(selectedOrder.payment.updated_at).toLocaleString('en-KE')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* No Payment Record */}
+                {!selectedOrder.payment && selectedOrder.payment_method === 'mpesa' && (
+                  <div>
+                    <h3 className="font-semibold text-sm text-gray-600 mb-2 flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Payment Details
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                      <DollarSign className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">No payment record found for this order.</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Payment may have been made through alternative methods or records may be processing.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <h3 className="font-semibold text-sm text-gray-600 mb-2">Order Items</h3>
