@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -26,10 +25,6 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('pay_on_delivery');
   const [deliveryMethod, setDeliveryMethod] = useState('delivery');
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [paymentPhoneNumber, setPaymentPhoneNumber] = useState('');
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -86,10 +81,6 @@ export default function CheckoutPage() {
         city: '',
         notes: '',
       });
-      // Pre-fill payment phone number with customer phone for M-Pesa payments
-      if (customer.phone) {
-        setPaymentPhoneNumber(customer.phone);
-      }
     }
   }, [customer]);
 
@@ -104,57 +95,6 @@ export default function CheckoutPage() {
     });
   };
 
-  const handlePayment = async () => {
-    if (!currentOrderId || !paymentPhoneNumber) {
-      toast({
-        title: 'Error',
-        description: 'Please enter your phone number for payment.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setPaymentLoading(true);
-
-    try {
-      const response = await fetch('/api/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orderId: currentOrderId,
-          phoneNumber: paymentPhoneNumber,
-          amount: total,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to initiate payment');
-      }
-
-      toast({
-        title: 'Payment initiated!',
-        description: result.message || 'Please check your phone for the M-Pesa prompt.',
-      });
-
-      // Close dialog and redirect to success page
-      setShowPaymentDialog(false);
-      router.push(`/order-success?orderNumber=${result.orderNumber || 'Unknown'}&orderId=${currentOrderId}`);
-
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast({
-        title: 'Payment failed',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,15 +149,18 @@ export default function CheckoutPage() {
       }
 
       clearCart();
-      setCurrentOrderId(result.order.id);
 
       toast({
         title: 'Order placed successfully!',
-        description: `Your order number is ${result.order.order_number}. You can complete payment online now or later.`,
+        description: `Your order number is ${result.order.order_number}.`,
       });
 
-      // Show payment dialog for all payment methods
-      setShowPaymentDialog(true);
+      // Redirect to order page
+      if (paymentMethod === 'mpesa') {
+        router.push(`/orders/${result.order.id}?payment=true`);
+      } else {
+        router.push(`/orders/${result.order.id}`);
+      }
 
     } catch (error) {
       console.error('Error placing order:', error);
@@ -473,58 +416,6 @@ export default function CheckoutPage() {
             </div>
           </form>
 
-          {/* Payment Dialog for All Orders */}
-          <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Complete Payment Online</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  Your order has been placed successfully! You can complete payment using M-Pesa now or later from your order history.
-                </p>
-
-                <div>
-                  <Label htmlFor="paymentPhone">M-Pesa Phone Number *</Label>
-                  <Input
-                    id="paymentPhone"
-                    type="tel"
-                    value={paymentPhoneNumber}
-                    onChange={(e) => setPaymentPhoneNumber(e.target.value)}
-                    placeholder="0712345678 or +254712345678"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900 mb-2">Payment Amount: KES {total.toLocaleString()}</p>
-                  <p className="text-xs text-blue-700">
-                    You will receive an M-Pesa prompt on your phone to complete the payment.
-                  </p>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                     setShowPaymentDialog(false);
-                     router.push('/profile');
-                   }}
-                    className="flex-1"
-                  >
-                    Complete Later
-                  </Button>
-                  <Button
-                    onClick={handlePayment}
-                    disabled={paymentLoading || !paymentPhoneNumber}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                  >
-                    {paymentLoading ? 'Processing...' : 'Pay Now'}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
       </main>
       <Footer />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -60,6 +60,7 @@ interface OrderDetails {
 export default function OrderDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, customer } = useAuth();
   const { toast } = useToast();
 
@@ -84,6 +85,13 @@ export default function OrderDetailsPage() {
 
     fetchOrderDetails();
   }, [user, customer, params.id, router]);
+
+  // Auto-open payment dialog if payment=true query param is present
+  useEffect(() => {
+    if (order && searchParams.get('payment') === 'true' && (order.payment_status === 'pending' || order.payment_status === 'failed')) {
+      setShowPaymentDialog(true);
+    }
+  }, [order, searchParams]);
 
   const fetchOrderDetails = async () => {
     if (!params.id || !customer?.id) return;
