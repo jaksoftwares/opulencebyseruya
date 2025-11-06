@@ -25,6 +25,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('pay_on_delivery');
   const [deliveryMethod, setDeliveryMethod] = useState('delivery');
+  const [orderPlaced, setOrderPlaced] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -53,7 +54,7 @@ export default function CheckoutPage() {
   const total = cartTotal + deliveryFee;
 
   useEffect(() => {
-    if (cart.length === 0) {
+    if (cart.length === 0 && !orderPlaced) {
       router.push('/cart');
       return;
     }
@@ -68,7 +69,7 @@ export default function CheckoutPage() {
       router.push('/login');
       return;
     }
-  }, [cart.length, router, user, toast]);
+  }, [cart.length, orderPlaced, router, user, toast]);
 
   // Pre-fill form with customer data if available
   useEffect(() => {
@@ -149,6 +150,7 @@ export default function CheckoutPage() {
       }
 
       clearCart();
+      setOrderPlaced(true);
 
       toast({
         title: 'Order placed successfully!',
