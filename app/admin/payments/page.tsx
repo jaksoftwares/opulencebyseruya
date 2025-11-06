@@ -28,7 +28,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface Payment {
-  id: string;
+  payment_id: string;
   order_id: string;
   merchant_request_id?: string;
   checkout_request_id?: string;
@@ -46,13 +46,10 @@ interface Payment {
   payment_method?: string;
   created_at: string;
   updated_at: string;
-  customer_id?: string;
   order_number?: string;
-  users?: {
-    full_name: string;
-    email: string;
-    phone?: string;
-  };
+  customer_name?: string;
+  customer_email?: string;
+  customer_phone?: string;
 }
 
 export default function AdminPaymentsPage() {
@@ -137,7 +134,7 @@ export default function AdminPaymentsPage() {
       });
       fetchPayments();
 
-      if (selectedPayment && selectedPayment.id === paymentId) {
+      if (selectedPayment && selectedPayment.payment_id === paymentId) {
         setSelectedPayment({ ...selectedPayment, status: newStatus });
       }
     } catch (error: any) {
@@ -185,8 +182,8 @@ export default function AdminPaymentsPage() {
     const matchesSearch =
       payment.mpesa_receipt_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.users?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.users?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.phone_number.includes(searchTerm);
 
     const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
@@ -338,7 +335,7 @@ export default function AdminPaymentsPage() {
                   </TableRow>
                 ) : (
                   filteredPayments.map((payment) => (
-                    <TableRow key={payment.id} className="hover:bg-gray-50">
+                    <TableRow key={payment.payment_id} className="hover:bg-gray-50">
                       <TableCell className="font-mono text-sm">
                         {payment.mpesa_receipt_number || 'N/A'}
                       </TableCell>
@@ -347,8 +344,8 @@ export default function AdminPaymentsPage() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{payment.users?.full_name || 'N/A'}</div>
-                          <div className="text-sm text-gray-500">{payment.users?.email || ''}</div>
+                          <div className="font-medium">{payment.customer_name || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">{payment.customer_email || ''}</div>
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
@@ -406,13 +403,13 @@ export default function AdminPaymentsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-sm text-gray-600 mb-1">Payment ID</h3>
-                    <p className="text-lg font-mono text-gray-900 text-sm">{selectedPayment.id}</p>
+                    <p className="text-lg font-mono text-gray-900 text-sm">{selectedPayment.payment_id}</p>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-sm text-gray-600 mb-1">Status</h3>
                     <Select
                       value={selectedPayment.status}
-                      onValueChange={(value) => handleStatusUpdate(selectedPayment.id, value)}
+                      onValueChange={(value) => handleStatusUpdate(selectedPayment.payment_id, value)}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -432,13 +429,14 @@ export default function AdminPaymentsPage() {
                 </div>
 
                 {/* Order Information */}
-                {(selectedPayment.order_number || selectedPayment.users) && (
+                {(selectedPayment.order_number || selectedPayment.customer_name) && (
                   <div>
                     <h3 className="font-semibold text-sm text-gray-600 mb-2">Order Information</h3>
                     <div className="space-y-1 text-sm bg-gray-50 p-4 rounded-lg">
                       <p><span className="font-medium">Order Number:</span> {selectedPayment.order_number || 'N/A'}</p>
-                      <p><span className="font-medium">Customer:</span> {selectedPayment.users?.full_name || 'N/A'}</p>
-                      <p><span className="font-medium">Email:</span> {selectedPayment.users?.email || 'N/A'}</p>
+                      <p><span className="font-medium">Customer:</span> {selectedPayment.customer_name || 'N/A'}</p>
+                      <p><span className="font-medium">Email:</span> {selectedPayment.customer_email || 'N/A'}</p>
+                      <p><span className="font-medium">Phone:</span> {selectedPayment.customer_phone || 'N/A'}</p>
                     </div>
                   </div>
                 )}

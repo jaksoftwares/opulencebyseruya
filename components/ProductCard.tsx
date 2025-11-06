@@ -444,7 +444,7 @@ export default function ProductCard({
                             onClick={(e) => {
                               e.stopPropagation();
                               const message = `Hi, I'm interested in ordering:\n\n*${productDetails.name}*\nPrice: KES ${productDetails.price.toLocaleString()}\nSKU: ${productDetails.sku}\n\nPlease provide more details.`;
-                              const whatsappUrl = `https://wa.me/254700000000?text=${encodeURIComponent(message)}`;
+                              const whatsappUrl = `https://wa.me/254742 617839?text=${encodeURIComponent(message)}`;
                               window.open(whatsappUrl, '_blank');
                             }}
                             variant="outline"
