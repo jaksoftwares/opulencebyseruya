@@ -95,9 +95,10 @@ export default function ProductCard({
   const handleWhatsAppOrder = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    const message = `Hi, I'm interested in ordering:\n\n*${name}*\nPrice: KES ${price.toLocaleString()}\nSKU: ${sku}\n\nPlease provide more details.`;
-    const whatsappUrl = `https://wa.me/254700000000?text=${encodeURIComponent(message)}`;
+
+    const productUrl = `${window.location.origin}/products/${slug}`;
+    const message = `Hi, I'm interested in ordering:\n\n*${name}*\nPrice: KES ${price.toLocaleString()}\nSKU: ${sku}\nProduct Link: ${productUrl}\n\nPlease provide more details.`;
+    const whatsappUrl = `https://wa.me/254742617839?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 
@@ -443,8 +444,9 @@ export default function ProductCard({
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
-                              const message = `Hi, I'm interested in ordering:\n\n*${productDetails.name}*\nPrice: KES ${productDetails.price.toLocaleString()}\nSKU: ${productDetails.sku}\n\nPlease provide more details.`;
-                              const whatsappUrl = `https://wa.me/254742 617839?text=${encodeURIComponent(message)}`;
+                              const productUrl = `${window.location.origin}/products/${productDetails.slug}`;
+                              const message = `Hi, I'm interested in ordering:\n\n*${productDetails.name}*\nPrice: KES ${productDetails.price.toLocaleString()}\nSKU: ${productDetails.sku}\nProduct Link: ${productUrl}\n\nPlease provide more details.`;
+                              const whatsappUrl = `https://wa.me/254742617839?text=${encodeURIComponent(message)}`;
                               window.open(whatsappUrl, '_blank');
                             }}
                             variant="outline"

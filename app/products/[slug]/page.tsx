@@ -119,8 +119,9 @@ export default function ProductDetailPage() {
 
   const handleWhatsAppOrder = () => {
     if (!product) return;
-    
-    const message = `Hi, I'm interested in ordering:\n\n*${product.name}*\nPrice: KES ${product.price.toLocaleString()}\nQuantity: ${quantity}\nSKU: ${product.sku}\n\nPlease provide more details about delivery and payment.`;
+
+    const productUrl = `${window.location.origin}/products/${product.slug}`;
+    const message = `Hi, I'm interested in ordering:\n\n*${product.name}*\nPrice: KES ${product.price.toLocaleString()}\nQuantity: ${quantity}\nSKU: ${product.sku}\nProduct Link: ${productUrl}\n\nPlease provide more details about delivery and payment.`;
     const whatsappUrl = `https://wa.me/254742617839?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };

@@ -53,14 +53,7 @@ const features = [
     color: 'from-red-500 to-rose-600',
     stat: 'Certified',
   },
-  {
-    icon: Package2,
-    title: 'Easy Returns',
-    description:
-      'Hassle-free 14-day return policy if you are not completely satisfied',
-    color: 'from-teal-500 to-cyan-600',
-    stat: '14 Days',
-  },
+ 
   {
     icon: Clock,
     title: 'Fast Processing',
