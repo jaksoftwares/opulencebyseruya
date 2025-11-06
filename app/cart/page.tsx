@@ -15,7 +15,7 @@ export default function CartPage() {
   // Note: This is a simplified calculation for cart display
   // Actual delivery fee will be calculated in checkout based on delivery method and county
   // Nairobi and surrounding areas: KES 300, Other counties: KES 500
-  const deliveryFee = 300; // Show minimum fee in cart
+  const deliveryFee = 0; // Show minimum fee in cart
   const total = cartTotal + deliveryFee;
 
   if (cart.length === 0) {
@@ -139,9 +139,9 @@ export default function CartPage() {
                       <span>KES {deliveryFee.toLocaleString()}</span>
                     </div>
 
-                    <p className="text-xs text-gray-500">
+                    {/* <p className="text-xs text-gray-500">
                       Final delivery fee will be calculated at checkout based on your delivery method and county
-                    </p>
+                    </p> */}
                   </div>
 
                   <Separator />
