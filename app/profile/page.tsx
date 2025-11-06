@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, User, Mail, Phone, Save, Package, Eye, CreditCard, Truck, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Loader2, User, Mail, Phone, Save, Package, Eye, CreditCard, Truck, CheckCircle, Clock, XCircle, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface Order {
@@ -241,6 +241,16 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <Button
+              variant="outline"
+              onClick={() => router.push('/shop')}
+              className="flex items-center gap-2"
+            >
+              <ShoppingBag className="h-4 w-4" />
+              Back to Shop
+            </Button>
+          </div>
           <h1 className="text-3xl font-bold text-gray-900">My Account</h1>
           <p className="mt-2 text-gray-600">Manage your profile and track your orders</p>
         </div>
