@@ -22,12 +22,56 @@ export const metadata: Metadata = {
   title: 'Opulence by Seruya - Luxury Living for Every Home',
   description: 'Discover premium kitchenware, home decor, and lifestyle essentials. Shop elegant dinnerware, cookware, travel accessories, and more.',
   keywords: 'luxury home goods, kitchenware Kenya, home decor, premium cookware, dinnerware sets and travel essentials',
+  authors: [{ name: 'Opulence by Seruya' }],
+  creator: 'Opulence by Seruya',
+  publisher: 'Opulence by Seruya',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL('https://opulencebyseruya.com'),
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
-    images: ['/opulence.jpg'],
+    title: 'Opulence by Seruya - Luxury Living for Every Home',
+    description: 'Discover premium kitchenware, home decor, and lifestyle essentials. Shop elegant dinnerware, cookware, travel accessories, and more.',
+    url: 'https://opulencebyseruya.com',
+    siteName: 'Opulence by Seruya',
+    images: [
+      {
+        url: '/opulence.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Opulence by Seruya - Luxury Home Goods',
+      },
+    ],
+    locale: 'en_KE',
+    type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
+    title: 'Opulence by Seruya - Luxury Living for Every Home',
+    description: 'Discover premium kitchenware, home decor, and lifestyle essentials. Shop elegant dinnerware, cookware, travel accessories, and more.',
     images: ['/opulence.jpg'],
+    creator: '@opulencebyseruya',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    nocache: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      noimageindex: false,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: 'your-google-site-verification-code',
   },
 };
 
