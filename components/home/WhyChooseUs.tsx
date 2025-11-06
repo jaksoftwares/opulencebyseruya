@@ -17,15 +17,15 @@ const features = [
     icon: Truck,
     title: 'Nationwide Delivery',
     description:
-      'Fast and reliable shipping to all corners of Kenya within 2-5 business days',
+      'Fast and reliable shipping to all corners of Kenya within 24 hours, same day delivery within Nairobi',
     color: 'from-blue-500 to-cyan-600',
-    stat: '2-5 Days',
+    stat: '24 hours',
   },
   {
     icon: Shield,
     title: 'Quality Guaranteed',
     description:
-      'Premium products with 100% satisfaction guarantee or your money back',
+      'Premium products with 100% satisfaction guarantee',
     color: 'from-green-500 to-emerald-600',
     stat: '100%',
   },

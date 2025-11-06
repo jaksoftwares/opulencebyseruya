@@ -484,15 +484,7 @@ export default function ProductDetailPage() {
 
               {/* Features */}
               <div className="bg-white rounded-xl border-2 border-gray-100 p-6 space-y-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Truck className="h-6 w-6 text-amber-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Free Delivery</h3>
-                    <p className="text-sm text-gray-600">On orders above KES 3,000 within Nairobi</p>
-                  </div>
-                </div>
+               
 
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -500,7 +492,7 @@ export default function ProductDetailPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Quality Guarantee</h3>
-                    <p className="text-sm text-gray-600">30-day return policy for defective items</p>
+                    <p className="text-sm text-gray-600">Quality assured product</p>
                   </div>
                 </div>
 
@@ -592,16 +584,13 @@ export default function ProductDetailPage() {
                     <ul className="space-y-3 text-gray-700">
                       <li className="flex items-start gap-3">
                         <MapPin className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <span>Same-day delivery for clients within Nairobi (orders confirmed before 2 PM)</span>
+                        <span>Same-day delivery for clients within Nairobi.</span>
                       </li>
                       <li className="flex items-start gap-3">
                         <Clock className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                         <span>24-hour delivery for orders outside Nairobi</span>
                       </li>
-                      <li className="flex items-start gap-3">
-                        <Package className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <span>Free delivery within Nairobi for orders above KES 5,000</span>
-                      </li>
+                      
                     </ul>
                   </div>
 
