@@ -5,11 +5,11 @@ import { mpesaService } from '@/lib/mpesa';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const checkoutRequestId = searchParams.get('checkoutRequestId');
+    const orderId = searchParams.get('orderId');
 
-    if (!checkoutRequestId) {
+    if (!orderId) {
       return NextResponse.json(
-        { error: 'Checkout Request ID is required' },
+        { error: 'Order ID is required' },
         { status: 400 }
       );
     }
@@ -26,11 +26,13 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    // Get payment record
+    // Get payment record by order_id
     const { data: payment, error: paymentError } = await supabaseAdmin
       .from('payments')
       .select('*')
-      .eq('checkout_request_id', checkoutRequestId)
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
     if (paymentError || !payment) {
@@ -41,9 +43,9 @@ export async function GET(request: NextRequest) {
     }
 
     // If payment is still processing, query M-Pesa for status
-    if (payment.status === 'processing') {
+    if (payment.status === 'processing' && payment.checkout_request_id) {
       try {
-        const statusResponse = await mpesaService.querySTKPushStatus(checkoutRequestId);
+        const statusResponse = await mpesaService.querySTKPushStatus(payment.checkout_request_id);
         console.log('M-Pesa status query response:', statusResponse);
 
         // Update payment status based on query response
@@ -59,7 +61,7 @@ export async function GET(request: NextRequest) {
                 result_code: resultCode.toString(),
                 result_desc: statusResponse.ResultDesc
               })
-              .eq('checkout_request_id', checkoutRequestId);
+              .eq('id', payment.id);
 
             // Update order
             await supabaseAdmin
@@ -79,7 +81,7 @@ export async function GET(request: NextRequest) {
                 result_code: resultCode.toString(),
                 result_desc: statusResponse.ResultDesc
               })
-              .eq('checkout_request_id', checkoutRequestId);
+              .eq('id', payment.id);
 
             // Update order
             await supabaseAdmin

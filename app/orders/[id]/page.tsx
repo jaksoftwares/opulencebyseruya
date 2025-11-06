@@ -535,13 +535,13 @@ export default function OrderDetailsPage() {
                   <CardTitle>Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {order.payment_status === 'pending' && (
+                  {(order.payment_status === 'pending' || order.payment_status === 'failed') && (
                     <Button
                       onClick={() => setShowPaymentDialog(true)}
                       className="w-full bg-green-600 hover:bg-green-700"
                     >
                       <CreditCard className="h-4 w-4 mr-2" />
-                      Complete Payment
+                      {order.payment_status === 'failed' ? 'Retry Payment' : 'Complete Payment'}
                     </Button>
                   )}
 
