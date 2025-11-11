@@ -20,49 +20,68 @@ export default function Testimonials() {
   const testimonials: Testimonial[] = [
     {
       id: 1,
-      name: 'Amina Hassan',
+      name: 'David Kimani',
       location: 'Nairobi, Kenya',
       rating: 5,
       text: 'The quality of products from Opulence is absolutely exceptional! My kitchen has never looked better. The cookware set I purchased is not only beautiful but incredibly durable. Highly recommend!',
-      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200',
+      image: './david-kimani.jpg',
       product: 'Premium Cookware Set'
     },
     {
       id: 2,
-      name: 'David Kamau',
+      name: 'Jessica Ayuma',
       location: 'Mombasa, Kenya',
       rating: 5,
       text: 'Shopping with Opulence has been a game-changer for my home. Fast delivery, excellent customer service, and products that truly live up to their premium promise. Will definitely shop again!',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200',
+      image: './jessica-ayuma.jpg',
       product: 'Home Decor Collection'
     },
     {
       id: 3,
-      name: 'Grace Wanjiku',
+      name: 'John Omire',
       location: 'Kisumu, Kenya',
       rating: 5,
       text: 'I am in love with my new bathroom accessories! The attention to detail and luxurious feel is worth every shilling. Opulence has become my go-to for all home essentials.',
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200',
+      image: './john-omire.jpg',
       product: 'Luxury Bath Set'
     },
     {
       id: 4,
-      name: 'James Omondi',
+      name: 'Martin Mwangi',
       location: 'Nakuru, Kenya',
       rating: 5,
       text: 'From browsing to delivery, everything was seamless. The storage solutions I bought have transformed my home organization. Quality products at fair prices with excellent service!',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200',
+      image: './martin-mwangi.jpg',
       product: 'Storage Organizers'
     },
     {
       id: 5,
-      name: 'Sarah Njeri',
+      name: 'Peter Kimani',
       location: 'Eldoret, Kenya',
       rating: 5,
       text: 'The customer service team went above and beyond to help me choose the perfect items for my new home. Every piece arrived perfectly packaged and exceeded my expectations!',
-      image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200',
+      image: './peter-kimani.jpg',
       product: 'Bedroom Essentials'
+    },
+    {
+      id: 6,
+      name: 'Robert Leaky',
+      location: 'Nairobi, Kenya',
+      rating: 5,
+      text: 'Opulence has transformed my living space with their exquisite furniture collection. The craftsmanship is outstanding, and the delivery was impeccable. Highly satisfied!',
+      image: './robert-leaky.jpg',
+      product: 'Modern Furniture Set'
+    },
+    {
+      id: 7,
+      name: 'Tracy Pelina',
+      location: 'Nakuru, Kenya',
+      rating: 5,
+      text: 'I\'ve never experienced such exceptional service and product quality. The home decor items I ordered have added so much elegance to my home. Opulence is my new favorite store!',
+      image: './tracy-pelina.jpg',
+      product: 'Elegant Home Decor'
     }
+    
   ];
 
   useEffect(() => {

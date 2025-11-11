@@ -80,6 +80,7 @@ export default function AdminProductsPage() {
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const [formData, setFormData] = useState<{
     name: string;
@@ -142,43 +143,64 @@ export default function AdminProductsPage() {
       } else {
         setLoading(true);
       }
-      const [productsRes, categoriesRes, subcategoriesRes, suppliersRes] = await Promise.all([
-        supabase
+
+      // Only fetch products for refresh, keep other data cached
+      if (isRefresh) {
+        const productsRes = await supabase
           .from('products')
           .select('id, category_id, subcategory_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, created_at, updated_at')
-          .order('created_at', { ascending: false }),
-        supabase.from('categories').select('id, name').eq('is_active', true),
-        supabase.from('subcategories').select('id, name, category_id').eq('is_active', true),
-        supabase.from('suppliers').select('id, name, company_name, email, phone').eq('is_active', true),
-      ]);
+          .order('created_at', { ascending: false });
 
-      if (productsRes.error) {
-        console.error('Error fetching products:', productsRes.error);
-        toast({
-          title: 'Error',
-          description: `Failed to fetch products: ${productsRes.error.message}`,
-          variant: 'destructive',
-        });
+        if (productsRes.error) {
+          console.error('Error fetching products:', productsRes.error);
+          toast({
+            title: 'Error',
+            description: `Failed to fetch products: ${productsRes.error.message}`,
+            variant: 'destructive',
+          });
+        } else {
+          setProducts(productsRes.data || []);
+        }
       } else {
-        setProducts(productsRes.data || []);
-      }
+        // Initial load - fetch all data
+        const [productsRes, categoriesRes, subcategoriesRes, suppliersRes] = await Promise.all([
+          supabase
+            .from('products')
+            .select('id, category_id, subcategory_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, created_at, updated_at')
+            .order('created_at', { ascending: false }),
+          supabase.from('categories').select('id, name').eq('is_active', true),
+          supabase.from('subcategories').select('id, name, category_id').eq('is_active', true),
+          supabase.from('suppliers').select('id, name, company_name, email, phone').eq('is_active', true),
+        ]);
 
-      if (categoriesRes.error) {
-        console.error('Error fetching categories:', categoriesRes.error);
-      } else {
-        setCategories(categoriesRes.data || []);
-      }
+        if (productsRes.error) {
+          console.error('Error fetching products:', productsRes.error);
+          toast({
+            title: 'Error',
+            description: `Failed to fetch products: ${productsRes.error.message}`,
+            variant: 'destructive',
+          });
+        } else {
+          setProducts(productsRes.data || []);
+        }
 
-      if (subcategoriesRes.error) {
-        console.error('Error fetching subcategories:', subcategoriesRes.error);
-      } else {
-        setSubcategories(subcategoriesRes.data || []);
-      }
+        if (categoriesRes.error) {
+          console.error('Error fetching categories:', categoriesRes.error);
+        } else {
+          setCategories(categoriesRes.data || []);
+        }
 
-      if (suppliersRes.error) {
-        console.error('Error fetching suppliers:', suppliersRes.error);
-      } else {
-        setSuppliers(suppliersRes.data || []);
+        if (subcategoriesRes.error) {
+          console.error('Error fetching subcategories:', subcategoriesRes.error);
+        } else {
+          setSubcategories(subcategoriesRes.data || []);
+        }
+
+        if (suppliersRes.error) {
+          console.error('Error fetching suppliers:', suppliersRes.error);
+        } else {
+          setSuppliers(suppliersRes.data || []);
+        }
       }
     } catch (error) {
       console.error('Error in fetchData:', error);
@@ -323,20 +345,36 @@ export default function AdminProductsPage() {
         }
       }
 
-      toast({
-        title: editingProduct ? 'Product updated successfully' : 'Product created successfully',
-        description: 'Product has been uploaded and saved successfully.',
-        variant: 'default'
-      });
+      // Update products list in state instead of reloading
+      if (editingProduct) {
+        // Update existing product in state
+        setProducts(prev => prev.map(p => p.id === editingProduct.id ? createdProduct : p));
+        toast({
+          title: 'Product updated successfully',
+          description: 'Product has been updated successfully.',
+          variant: 'default'
+        });
+      } else {
+        // Add new product to state
+        setProducts(prev => [createdProduct, ...prev]);
+        toast({
+          title: 'Product created successfully',
+          description: 'Product has been created successfully.',
+          variant: 'default'
+        });
+      }
+
+      // Show success state briefly
+      setShowSuccess(true);
+
+      // Reset success state after a brief moment
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 1000);
 
       // Close dialog and reset form
       setDialogOpen(false);
       resetForm();
-
-      // Refresh data after a short delay to ensure database consistency
-      setTimeout(() => {
-        fetchData();
-      }, 500);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -393,12 +431,10 @@ export default function AdminProductsPage() {
         body: JSON.stringify({ id }),
       });
       if (!res.ok) throw new Error(await res.text());
-      toast({ title: 'Product deleted successfully' });
 
-      // Refresh data after a short delay to ensure database consistency
-      setTimeout(() => {
-        fetchData();
-      }, 500);
+      // Remove product from state immediately
+      setProducts(prev => prev.filter(p => p.id !== id));
+      toast({ title: 'Product deleted successfully' });
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -474,24 +510,37 @@ export default function AdminProductsPage() {
     <div className="min-h-screen bg-gray-50">
       <AdminNav />
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
+
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <div>
             <h1 className="font-serif text-3xl font-bold text-gray-900">Products</h1>
             <p className="text-gray-600 mt-1">Manage your product inventory</p>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button className="bg-amber-600 hover:bg-amber-700">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Product
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            </div>
+
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button className="bg-amber-600 hover:bg-amber-700">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Product
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
                 <DialogTitle className="text-2xl">
                   {editingProduct ? 'Edit Product' : 'Add New Product'}
                 </DialogTitle>
@@ -517,6 +566,17 @@ export default function AdminProductsPage() {
                   <span>Images</span>
                 </div>
               </DialogHeader>
+
+              {showSuccess && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <p className="text-sm text-green-800 font-medium">
+                      Product added successfully! The products list has been refreshed.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <form onSubmit={(e) => {
                 e.preventDefault();
@@ -899,7 +959,6 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
                 )}
-              
 
                 {/* Navigation Buttons */}
                 <div className="flex justify-between pt-6 border-t">
@@ -1212,5 +1271,6 @@ export default function AdminProductsPage() {
         </Card>
       </div>
     </div>
+    // </div>
   );
 }
