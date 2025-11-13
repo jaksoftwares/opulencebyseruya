@@ -6,6 +6,7 @@ import Hero from '@/components/home/Hero';
 import FeaturedCategories from '@/components/home/FeaturedCategories';
 import FeaturedProducts from '@/components/home/FeaturedProducts';
 import TopDeals from '@/components/home/TopDeals';
+import NewArrivals from '@/components/home/NewArrivals';
 import WhyChooseUs from '@/components/home/WhyChooseUs';
 import Testimonials from '@/components/home/Testimonials';
 import Newsletter from '@/components/home/Newsletter';
@@ -25,7 +26,12 @@ export default function Home() {
         <FeaturedProducts />
         
         {/* Top Deals - Hot deals section with countdown timer */}
+        {/* ✅ This component correctly filters products by: is_active=true AND is_top_deal=true */}
         <TopDeals />
+        
+        {/* New Arrivals - Latest products with fresh arrival badges */}
+        {/* ✅ This component correctly filters products by: is_active=true AND is_new_arrival=true */}
+        <NewArrivals />
         
         {/* Why Choose Us - Trust building section with animated cards */}
         <WhyChooseUs />

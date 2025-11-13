@@ -31,7 +31,7 @@ export default function TopDeals() {
           .from('products')
           .select('*')
           .eq('is_active', true)
-          .eq('tag', 'top-deals')
+          .eq('is_top_deal', true)
           .order('created_at', { ascending: false })
           .limit(4);
 

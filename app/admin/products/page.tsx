@@ -12,7 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Eye, X, Upload, Image as ImageIcon, RefreshCw, Search, Star, AlertTriangle, Package2 as Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, X, Upload, Image as ImageIcon, RefreshCw, Search, Star, AlertTriangle, Package2 as Package, CheckSquare, Square } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +42,8 @@ interface Product {
   sold_count: number | null;
   stock_left: number | null;
   tag: string | null;
+  is_top_deal: boolean;
+  is_new_arrival: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -103,6 +107,9 @@ export default function AdminProductsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [bulkStatusOperation, setBulkStatusOperation] = useState<string>('');
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<{
     name: string;
@@ -122,6 +129,8 @@ export default function AdminProductsPage() {
     badge: string;
     tag: string;
     is_featured: boolean;
+    is_top_deal: boolean;
+    is_new_arrival: boolean;
     is_active: boolean;
   }>({
     name: '',
@@ -141,6 +150,8 @@ export default function AdminProductsPage() {
     badge: '',
     tag: '',
     is_featured: false,
+    is_top_deal: false,
+    is_new_arrival: false,
     is_active: true,
   });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -170,7 +181,7 @@ export default function AdminProductsPage() {
       if (isRefresh) {
         const productsRes = await supabase
           .from('products')
-          .select('id, category_id, subcategory_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, created_at, updated_at')
+          .select('id, category_id, subcategory_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_top_deal, is_new_arrival, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, created_at, updated_at')
           .order('created_at', { ascending: false });
 
         if (productsRes.error) {
@@ -186,10 +197,10 @@ export default function AdminProductsPage() {
       } else {
         // Initial load - fetch all data
         const [productsRes, categoriesRes, subcategoriesRes] = await Promise.all([
-          supabase
-            .from('products')
-            .select('id, category_id, subcategory_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, created_at, updated_at')
-            .order('created_at', { ascending: false }),
+        supabase
+          .from('products')
+          .select('id, category_id, subcategory_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_top_deal, is_new_arrival, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, created_at, updated_at')
+          .order('created_at', { ascending: false }),
           supabase.from('categories').select('id, name').eq('is_active', true),
           supabase.from('subcategories').select('id, name, category_id').eq('is_active', true),
         ]);
@@ -292,6 +303,10 @@ export default function AdminProductsPage() {
         filtered = filtered.filter(product => !product.is_active);
       } else if (statusFilter === 'featured') {
         filtered = filtered.filter(product => product.is_featured);
+      } else if (statusFilter === 'top_deal') {
+        filtered = filtered.filter(product => product.is_top_deal);
+      } else if (statusFilter === 'new_arrival') {
+        filtered = filtered.filter(product => product.is_new_arrival);
       }
     }
 
@@ -368,6 +383,8 @@ export default function AdminProductsPage() {
         images: Array.isArray(imageUrls) ? imageUrls : [],
         specifications: {},
         is_featured: !!formData.is_featured,
+        is_top_deal: !!formData.is_top_deal,
+        is_new_arrival: !!formData.is_new_arrival,
         is_active: !!formData.is_active,
         stock_left: isNaN(stock_left) ? 0 : stock_left,
       };
@@ -494,6 +511,8 @@ export default function AdminProductsPage() {
       badge: product.badge || '',
       tag: product.tag || '',
       is_featured: product.is_featured,
+      is_top_deal: product.is_top_deal || false,
+      is_new_arrival: product.is_new_arrival || false,
       is_active: product.is_active,
     });
     setExistingImages(product.images || []);
@@ -547,6 +566,117 @@ export default function AdminProductsPage() {
     }
   };
 
+  // Individual status toggle handler
+  const handleStatusToggle = async (productId: string, statusType: 'is_active' | 'is_featured' | 'is_top_deal' | 'is_new_arrival', currentValue: boolean) => {
+    setUpdatingStatus(`${productId}-${statusType}`);
+    
+    try {
+      const res = await fetch('/api/admin/products/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: productId,
+          status_type: statusType,
+          status_value: !currentValue
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      // Update local state optimistically
+      setProducts(prev => prev.map(p =>
+        p.id === productId
+          ? { ...p, [statusType]: !currentValue }
+          : p
+      ));
+
+      toast({
+        title: 'Status Updated',
+        description: `Product status has been ${!currentValue ? 'enabled' : 'disabled'} successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update status',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  // Bulk selection handlers
+  const handleSelectAll = () => {
+    if (selectedProducts.length === filteredProducts.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(filteredProducts.map(p => p.id));
+    }
+  };
+
+  const handleSelectProduct = (productId: string) => {
+    setSelectedProducts(prev =>
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  // Bulk status update handler
+  const handleBulkStatusUpdate = async () => {
+    if (!bulkStatusOperation || selectedProducts.length === 0) {
+      toast({
+        title: 'No Selection',
+        description: 'Please select products and status operation',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const [statusType, action] = bulkStatusOperation.split('-');
+    const statusValue = action === 'enable';
+
+    try {
+      const res = await fetch('/api/admin/products/bulk-status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_ids: selectedProducts,
+          status_type: statusType,
+          status_value: statusValue
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      // Update local state for all selected products
+      setProducts(prev => prev.map(p =>
+        selectedProducts.includes(p.id)
+          ? { ...p, [statusType]: statusValue }
+          : p
+      ));
+
+      // Clear selections
+      setSelectedProducts([]);
+      setBulkStatusOperation('');
+
+      toast({
+        title: 'Bulk Update Successful',
+        description: `Updated ${selectedProducts.length} products successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update products',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -566,6 +696,8 @@ export default function AdminProductsPage() {
       badge: '',
       tag: '',
       is_featured: false,
+      is_top_deal: false,
+      is_new_arrival: false,
       is_active: true,
     });
     setEditingProduct(null);
@@ -620,7 +752,7 @@ export default function AdminProductsPage() {
       <div className="container mx-auto px-4 py-8">
 
         {/* Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -656,8 +788,36 @@ export default function AdminProductsPage() {
                   <Star className="h-6 w-6 text-amber-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Featured Products</p>
+                  <p className="text-sm font-medium text-gray-600">Featured</p>
                   <p className="text-2xl font-bold text-gray-900">{products.filter(p => p.is_featured).length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <AlertTriangle className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Top Deals</p>
+                  <p className="text-2xl font-bold text-gray-900">{products.filter(p => p.is_top_deal).length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Star className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">New Arrivals</p>
+                  <p className="text-2xl font-bold text-gray-900">{products.filter(p => p.is_new_arrival).length}</p>
                 </div>
               </div>
             </CardContent>
@@ -707,6 +867,8 @@ export default function AdminProductsPage() {
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                   <SelectItem value="featured">Featured</SelectItem>
+                  <SelectItem value="top_deal">Top Deal</SelectItem>
+                  <SelectItem value="new_arrival">New Arrival</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -755,6 +917,56 @@ export default function AdminProductsPage() {
             </div>
           )}
         </div>
+
+        {/* Bulk Operations Section */}
+        {selectedProducts.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="h-5 w-5 text-blue-600" />
+                <span className="font-medium text-blue-900">
+                  {selectedProducts.length} product{selectedProducts.length > 1 ? 's' : ''} selected
+                </span>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-3">
+                <Select value={bulkStatusOperation} onValueChange={setBulkStatusOperation}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Select action..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="is_active-enable">Activate Products</SelectItem>
+                    <SelectItem value="is_active-disable">Deactivate Products</SelectItem>
+                    <SelectItem value="is_featured-enable">Mark as Featured</SelectItem>
+                    <SelectItem value="is_featured-disable">Remove Featured</SelectItem>
+                    <SelectItem value="is_top_deal-enable">Mark as Top Deal</SelectItem>
+                    <SelectItem value="is_top_deal-disable">Remove Top Deal</SelectItem>
+                    <SelectItem value="is_new_arrival-enable">Mark as New Arrival</SelectItem>
+                    <SelectItem value="is_new_arrival-disable">Remove New Arrival</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  onClick={handleBulkStatusUpdate}
+                  disabled={!bulkStatusOperation}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Apply to Selected
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedProducts([]);
+                    setBulkStatusOperation('');
+                  }}
+                >
+                  Clear Selection
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <div>
@@ -829,7 +1041,7 @@ export default function AdminProductsPage() {
                   handleSubmit(e);
                 }
               }} onKeyDown={(e) => {
-                if (e.key === 'Enter' && currentStep !== 3) {
+                if (e.key === 'Enter' && currentStep !== 3 && (e.target as HTMLElement)?.tagName !== 'INPUT' && (e.target as HTMLElement)?.tagName !== 'BUTTON') {
                   e.preventDefault();
                 }
               }} className="space-y-6 mt-6">
@@ -1091,27 +1303,61 @@ export default function AdminProductsPage() {
 
                     <div className="border rounded-lg p-4 bg-gray-50">
                       <p className="text-sm font-medium text-gray-700 mb-3">Product Status</p>
-                      <div className="flex items-center space-x-6">
-                        <div className="flex items-center space-x-2">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="flex items-center space-x-3 p-2 rounded hover:bg-white/50 transition-colors">
                           <input
                             type="checkbox"
                             id="is_featured"
                             checked={formData.is_featured}
-                            onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
-                            className="rounded w-4 h-4"
+                            onChange={(e) => {
+                              console.log('Featured checkbox clicked:', e.target.checked);
+                              setFormData({ ...formData, is_featured: e.target.checked });
+                            }}
+                            className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2 cursor-pointer"
                           />
-                          <Label htmlFor="is_featured" className="cursor-pointer">Featured Product</Label>
+                          <Label htmlFor="is_featured" className="cursor-pointer text-sm font-medium">⭐ Featured Product</Label>
                         </div>
 
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-3 p-2 rounded hover:bg-white/50 transition-colors">
+                          <input
+                            type="checkbox"
+                            id="is_top_deal"
+                            checked={formData.is_top_deal}
+                            onChange={(e) => {
+                              console.log('Top Deal checkbox clicked:', e.target.checked);
+                              setFormData({ ...formData, is_top_deal: e.target.checked });
+                            }}
+                            className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2 cursor-pointer"
+                          />
+                          <Label htmlFor="is_top_deal" className="cursor-pointer text-sm font-medium">🔥 Top Deal</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-3 p-2 rounded hover:bg-white/50 transition-colors">
+                          <input
+                            type="checkbox"
+                            id="is_new_arrival"
+                            checked={formData.is_new_arrival}
+                            onChange={(e) => {
+                              console.log('New Arrival checkbox clicked:', e.target.checked);
+                              setFormData({ ...formData, is_new_arrival: e.target.checked });
+                            }}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                          />
+                          <Label htmlFor="is_new_arrival" className="cursor-pointer text-sm font-medium">✨ New Arrival</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-3 p-2 rounded hover:bg-white/50 transition-colors">
                           <input
                             type="checkbox"
                             id="is_active"
                             checked={formData.is_active}
-                            onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                            className="rounded w-4 h-4"
+                            onChange={(e) => {
+                              console.log('Active checkbox clicked:', e.target.checked);
+                              setFormData({ ...formData, is_active: e.target.checked });
+                            }}
+                            className="w-4 h-4 text-gray-600 bg-gray-100 border-gray-300 rounded focus:ring-gray-500 focus:ring-2 cursor-pointer"
                           />
-                          <Label htmlFor="is_active" className="cursor-pointer">Active/Published</Label>
+                          <Label htmlFor="is_active" className="cursor-pointer text-sm font-medium">Active/Published</Label>
                         </div>
                       </div>
                     </div>
@@ -1403,6 +1649,12 @@ export default function AdminProductsPage() {
                     {viewingProduct.is_featured && (
                       <Badge className="bg-amber-100 text-amber-800">Featured</Badge>
                     )}
+                    {viewingProduct.is_top_deal && (
+                      <Badge className="bg-green-100 text-green-800">Top Deal</Badge>
+                    )}
+                    {viewingProduct.is_new_arrival && (
+                      <Badge className="bg-blue-100 text-blue-800">New Arrival</Badge>
+                    )}
                     {viewingProduct.badge && (
                       <Badge variant="outline">{viewingProduct.badge}</Badge>
                     )}
@@ -1430,6 +1682,13 @@ export default function AdminProductsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={filteredProducts.length > 0 && selectedProducts.length === filteredProducts.length}
+                      onCheckedChange={handleSelectAll}
+                      disabled={filteredProducts.length === 0}
+                    />
+                  </TableHead>
                   <TableHead>Product</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead>Price</TableHead>
@@ -1443,7 +1702,7 @@ export default function AdminProductsPage() {
               <TableBody>
                 {filteredProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={9} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-gray-500">
                         <ImageIcon className="w-12 h-12 mb-3 text-gray-400" />
                         <p className="font-medium">
@@ -1458,6 +1717,12 @@ export default function AdminProductsPage() {
                 ) : (
                   filteredProducts.map((product) => (
                     <TableRow key={product.id} className="hover:bg-gray-50">
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedProducts.includes(product.id)}
+                          onCheckedChange={() => handleSelectProduct(product.id)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           {product.images && product.images.length > 0 ? (
@@ -1523,15 +1788,46 @@ export default function AdminProductsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <Badge variant={product.is_active ? 'default' : 'secondary'}>
-                            {product.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                          {product.is_featured && (
-                            <Badge variant="outline" className="text-xs">
-                              Featured
-                            </Badge>
-                          )}
+                        <div className="space-y-3">
+                          {/* Status Toggle Buttons */}
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs text-gray-600">Active</Label>
+                              <Switch
+                                checked={product.is_active}
+                                onCheckedChange={() => handleStatusToggle(product.id, 'is_active', product.is_active)}
+                                disabled={updatingStatus === `${product.id}-is_active`}
+                                size="sm"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs text-gray-600">Featured</Label>
+                              <Switch
+                                checked={product.is_featured}
+                                onCheckedChange={() => handleStatusToggle(product.id, 'is_featured', product.is_featured)}
+                                disabled={updatingStatus === `${product.id}-is_featured`}
+                                size="sm"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs text-gray-600">Top Deal</Label>
+                              <Switch
+                                checked={product.is_top_deal}
+                                onCheckedChange={() => handleStatusToggle(product.id, 'is_top_deal', product.is_top_deal)}
+                                disabled={updatingStatus === `${product.id}-is_top_deal`}
+                                size="sm"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs text-gray-600">New Arrival</Label>
+                              <Switch
+                                checked={product.is_new_arrival}
+                                onCheckedChange={() => handleStatusToggle(product.id, 'is_new_arrival', product.is_new_arrival)}
+                                disabled={updatingStatus === `${product.id}-is_new_arrival`}
+                                size="sm"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">

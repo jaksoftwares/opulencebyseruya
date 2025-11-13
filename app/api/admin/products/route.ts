@@ -6,7 +6,10 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin.from('products').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .select('id, category_id, subcategory_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_top_deal, is_new_arrival, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, variations, created_at, updated_at')
+    .order('created_at', { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }

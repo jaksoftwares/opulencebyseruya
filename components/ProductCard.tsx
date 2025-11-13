@@ -20,6 +20,8 @@ interface ProductCardProps {
    image: string;
    isInStock: boolean;
    isFeatured?: boolean;
+   isTopDeal?: boolean;
+   isNewArrival?: boolean;
    sku: string;
    rating?: number;
    reviews?: number;
@@ -37,6 +39,8 @@ interface ProductDetails {
    images: string[];
    specifications: Record<string, any>;
    is_featured: boolean;
+   is_top_deal: boolean;
+   is_new_arrival: boolean;
    is_active: boolean;
    rating: number | null;
    reviews: number | null;
@@ -59,6 +63,8 @@ export default function ProductCard({
    image,
    isInStock,
    isFeatured,
+   isTopDeal,
+   isNewArrival,
    sku,
    rating = 4.5,
    reviews = 0,
@@ -177,6 +183,16 @@ export default function ProductCard({
             {isFeatured && (
               <div className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-bold rounded-full shadow-lg">
                 ⭐ Featured
+              </div>
+            )}
+            {isTopDeal && (
+              <div className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-bold rounded-full shadow-lg">
+                🔥 Top Deal
+              </div>
+            )}
+            {isNewArrival && (
+              <div className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold rounded-full shadow-lg">
+                ✨ New
               </div>
             )}
             {discount > 0 && (
@@ -407,6 +423,12 @@ export default function ProductCard({
                     <div className="flex flex-wrap gap-2 mb-6">
                       {productDetails.is_featured && (
                         <Badge className="bg-amber-100 text-amber-800">⭐ Featured</Badge>
+                      )}
+                      {productDetails.is_top_deal && (
+                        <Badge className="bg-green-100 text-green-800">🔥 Top Deal</Badge>
+                      )}
+                      {productDetails.is_new_arrival && (
+                        <Badge className="bg-blue-100 text-blue-800">✨ New Arrival</Badge>
                       )}
                       {productDetails.badge && (
                         <Badge variant="outline">{productDetails.badge}</Badge>
