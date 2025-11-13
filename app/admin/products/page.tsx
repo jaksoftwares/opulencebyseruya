@@ -163,14 +163,13 @@ export default function AdminProductsPage() {
         }
       } else {
         // Initial load - fetch all data
-        const [productsRes, categoriesRes, subcategoriesRes, suppliersRes] = await Promise.all([
+        const [productsRes, categoriesRes, subcategoriesRes] = await Promise.all([
           supabase
             .from('products')
             .select('id, category_id, subcategory_id, name, slug, description, price, compare_at_price, sku, stock_quantity, images, specifications, is_featured, is_active, rating, reviews, badge, original_price, discount, sold_count, stock_left, tag, created_at, updated_at')
             .order('created_at', { ascending: false }),
           supabase.from('categories').select('id, name').eq('is_active', true),
           supabase.from('subcategories').select('id, name, category_id').eq('is_active', true),
-          supabase.from('suppliers').select('id, name, company_name, email, phone').eq('is_active', true),
         ]);
 
         if (productsRes.error) {
@@ -196,14 +195,49 @@ export default function AdminProductsPage() {
           setSubcategories(subcategoriesRes.data || []);
         }
 
-        if (suppliersRes.error) {
-          console.error('Error fetching suppliers:', suppliersRes.error);
-        } else {
-          setSuppliers(suppliersRes.data || []);
+        // Fetch suppliers using API (consistent with suppliers page)
+        try {
+          console.log('Fetching suppliers via API...');
+          const suppliersRes = await fetch('/api/admin/suppliers', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          if (!suppliersRes.ok) {
+            throw new Error(await suppliersRes.text());
+          }
+
+          const suppliersData = await suppliersRes.json();
+          console.log('Suppliers loaded via API:', suppliersData.length, 'items');
+          setSuppliers(suppliersData || []);
+        } catch (suppliersError: any) {
+          console.error('Failed to load suppliers via API:', suppliersError);
+
+          // Fallback to direct Supabase query
+          try {
+            console.log('Trying direct Supabase query for suppliers...');
+            const { data, error } = await supabase
+              .from('suppliers')
+              .select('id, name, company_name, email, phone')
+              .eq('is_active', true)
+              .order('created_at', { ascending: false });
+
+            if (error) {
+              console.error('Suppliers query error:', error);
+              throw error;
+            }
+
+            console.log('Suppliers loaded via Supabase:', data?.length || 0, 'items');
+            setSuppliers(data || []);
+          } catch (supabaseError: any) {
+            console.error('Both API and Supabase queries failed for suppliers:', supabaseError);
+            setSuppliers([]);
+          }
         }
       }
     } catch (error) {
       console.error('Error in fetchData:', error);
+
       toast({
         title: 'Error',
         description: 'Failed to load data',
@@ -214,7 +248,6 @@ export default function AdminProductsPage() {
       setRefreshing(false);
     }
   };
-
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setImageFiles(files);
