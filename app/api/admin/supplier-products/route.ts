@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -8,22 +8,28 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const supplierId = searchParams.get('supplier_id');
+  const productId = searchParams.get('product_id');
 
   let query = supabaseAdmin
     .from('supplier_products')
     .select(`
       *,
-      products:product_id (
+      suppliers:supplier_id (
         id,
         name,
-        sku,
-        price
+        company_name,
+        email,
+        phone
       )
     `)
     .order('created_at', { ascending: false });
 
   if (supplierId) {
     query = query.eq('supplier_id', supplierId);
+  }
+
+  if (productId) {
+    query = query.eq('product_id', productId);
   }
 
   const { data, error } = await query;

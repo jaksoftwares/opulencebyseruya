@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Eye, X, Upload, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, X, Upload, Image as ImageIcon, RefreshCw, Search, Star, AlertTriangle, Package2 as Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -63,6 +63,23 @@ interface Supplier {
   phone: string;
 }
 
+interface SupplierProduct {
+  id: string;
+  supplier_id: string;
+  product_id: string;
+  purchase_price: number;
+  quantity_supplied: number;
+  created_at: string;
+  updated_at: string;
+  suppliers: {
+    id: string;
+    name: string;
+    company_name: string;
+    email: string;
+    phone: string;
+  };
+}
+
 export default function AdminProductsPage() {
   const router = useRouter();
   const { isAdmin, customer, loading: authLoading } = useAuth();
@@ -78,9 +95,14 @@ export default function AdminProductsPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
+  const [viewingSupplierProduct, setViewingSupplierProduct] = useState<SupplierProduct | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   const [formData, setFormData] = useState<{
     name: string;
@@ -248,6 +270,38 @@ export default function AdminProductsPage() {
       setRefreshing(false);
     }
   };
+
+  // Filter products based on search and filters
+  useEffect(() => {
+    let filtered = products;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'active') {
+        filtered = filtered.filter(product => product.is_active);
+      } else if (statusFilter === 'inactive') {
+        filtered = filtered.filter(product => !product.is_active);
+      } else if (statusFilter === 'featured') {
+        filtered = filtered.filter(product => product.is_featured);
+      }
+    }
+
+    // Category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(product => product.category_id === categoryFilter);
+    }
+
+    setFilteredProducts(filtered);
+  }, [products, searchTerm, statusFilter, categoryFilter]);
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setImageFiles(files);
@@ -449,8 +503,24 @@ export default function AdminProductsPage() {
     setDialogOpen(true);
   };
 
-  const handleView = (product: Product) => {
+  const handleView = async (product: Product) => {
     setViewingProduct(product);
+
+    // Fetch supplier product information
+    try {
+      const response = await fetch(`/api/admin/supplier-products?product_id=${product.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Get the first supplier product for this product (should only be one)
+        setViewingSupplierProduct(data.length > 0 ? data[0] : null);
+      } else {
+        setViewingSupplierProduct(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch supplier product information:', error);
+      setViewingSupplierProduct(null);
+    }
+
     setViewDialogOpen(true);
   };
 
@@ -505,6 +575,11 @@ export default function AdminProductsPage() {
     setCurrentStep(1);
   };
 
+  const resetViewDialog = () => {
+    setViewingProduct(null);
+    setViewingSupplierProduct(null);
+  };
+
   const nextStep = () => {
     if (currentStep === 1 && (!formData.name || !formData.price || !formData.stock_quantity || !formData.sku)) {
       toast({
@@ -543,6 +618,143 @@ export default function AdminProductsPage() {
     <div className="min-h-screen bg-gray-50">
       <AdminNav />
       <div className="container mx-auto px-4 py-8">
+
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Package className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Products</p>
+                  <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Eye className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Active Products</p>
+                  <p className="text-2xl font-bold text-gray-900">{products.filter(p => p.is_active).length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <Star className="h-6 w-6 text-amber-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Featured Products</p>
+                  <p className="text-2xl font-bold text-gray-900">{products.filter(p => p.is_featured).length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Low Stock</p>
+                  <p className="text-2xl font-bold text-gray-900">{products.filter(p => p.stock_left !== null && p.stock_left <= 10).length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search and Filter Section */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
+              <Label htmlFor="search" className="text-sm font-medium">Search Products</Label>
+              <div className="relative mt-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="search"
+                  type="text"
+                  placeholder="Search by name, SKU, or description..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="w-full lg:w-48">
+              <Label htmlFor="status-filter" className="text-sm font-medium">Status</Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="featured">Featured</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-full lg:w-48">
+              <Label htmlFor="category-filter" className="text-sm font-medium">Category</Label>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('all');
+                  setCategoryFilter('all');
+                }}
+                className="px-4 py-2"
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </div>
+
+          {/* Filter Results Summary */}
+          {(searchTerm || statusFilter !== 'all' || categoryFilter !== 'all') && (
+            <div className="mt-4 pt-4 border-t">
+              <p className="text-sm text-gray-600">
+                Showing {filteredProducts.length} of {products.length} products
+                {searchTerm && ` matching "${searchTerm}"`}
+                {statusFilter !== 'all' && ` with status "${statusFilter}"`}
+                {categoryFilter !== 'all' && ` in category "${categories.find(c => c.id === categoryFilter)?.name}"`}
+              </p>
+            </div>
+          )}
+        </div>
 
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <div>
@@ -1023,7 +1235,10 @@ export default function AdminProductsPage() {
         </div>
 
         {/* Product View Dialog */}
-        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <Dialog open={viewDialogOpen} onOpenChange={(open) => {
+          setViewDialogOpen(open);
+          if (!open) resetViewDialog();
+        }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl">Product Details</DialogTitle>
@@ -1063,6 +1278,15 @@ export default function AdminProductsPage() {
                         <p className="text-sm text-gray-600">Description</p>
                         <p className="text-sm">{viewingProduct.description || 'No description'}</p>
                       </div>
+                      {viewingSupplierProduct && (
+                        <div>
+                          <p className="text-sm text-gray-600">Supplier</p>
+                          <p className="font-medium text-blue-600">{viewingSupplierProduct.suppliers?.name || 'Unknown Supplier'}</p>
+                          {viewingSupplierProduct.suppliers?.company_name && (
+                            <p className="text-xs text-gray-500">{viewingSupplierProduct.suppliers.company_name}</p>
+                          )}
+                        </div>
+                      )}
                       {viewingProduct.tag && (
                         <div>
                           <p className="text-sm text-gray-600">Tag</p>
@@ -1129,6 +1353,46 @@ export default function AdminProductsPage() {
                   </div>
                 )}
 
+                {/* Supplier Information */}
+                {viewingSupplierProduct && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-4">Supplier Information</h3>
+                    <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Supplier Name</p>
+                          <p className="font-medium text-gray-900">{viewingSupplierProduct.suppliers?.name || 'Unknown Supplier'}</p>
+                          {viewingSupplierProduct.suppliers?.company_name && (
+                            <p className="text-sm text-gray-600">{viewingSupplierProduct.suppliers.company_name}</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Purchase Price</p>
+                          <p className="font-semibold text-green-600">KES {viewingSupplierProduct.purchase_price?.toLocaleString() || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Email</p>
+                          <p className="text-sm text-gray-900">{viewingSupplierProduct.suppliers?.email || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Phone</p>
+                          <p className="text-sm text-gray-900">{viewingSupplierProduct.suppliers?.phone || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Quantity Supplied</p>
+                          <p className="text-sm text-gray-900">{viewingSupplierProduct.quantity_supplied || 0} units</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Relationship Created</p>
+                          <p className="text-sm text-gray-900">
+                            {viewingSupplierProduct.created_at ? new Date(viewingSupplierProduct.created_at).toLocaleDateString('en-KE') : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Status & Badges */}
                 <div>
                   <h3 className="font-semibold text-lg mb-4">Status & Labels</h3>
@@ -1177,18 +1441,22 @@ export default function AdminProductsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.length === 0 ? (
+                {filteredProducts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-gray-500">
                         <ImageIcon className="w-12 h-12 mb-3 text-gray-400" />
-                        <p className="font-medium">No products found</p>
-                        <p className="text-sm">Add your first product to get started.</p>
+                        <p className="font-medium">
+                          {products.length === 0 ? 'No products found' : 'No products match your filters'}
+                        </p>
+                        <p className="text-sm">
+                          {products.length === 0 ? 'Add your first product to get started.' : 'Try adjusting your search or filter criteria.'}
+                        </p>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  products.map((product) => (
+                  filteredProducts.map((product) => (
                     <TableRow key={product.id} className="hover:bg-gray-50">
                       <TableCell>
                         <div className="flex items-center gap-3">

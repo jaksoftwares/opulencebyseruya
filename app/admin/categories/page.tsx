@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Edit, Trash2, FolderOpen, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, FolderOpen, Eye, Grid3X3, CheckCircle, Layers, FolderTree } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -380,6 +380,68 @@ export default function AdminCategoriesPage() {
     <div className="min-h-screen bg-gray-50">
       <AdminNav />
       <div className="container mx-auto px-4 py-8">
+
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Grid3X3 className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Categories</p>
+                  <p className="text-2xl font-bold text-gray-900">{categories.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Active Categories</p>
+                  <p className="text-2xl font-bold text-gray-900">{categories.filter(c => c.is_active).length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Layers className="h-6 w-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Subcategories</p>
+                  <p className="text-2xl font-bold text-gray-900">{subcategories.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <FolderTree className="h-6 w-6 text-amber-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Categories with Subs</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {categories.filter(c => subcategories.some(sc => sc.category_id === c.id)).length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="font-serif text-3xl font-bold text-gray-900">Categories</h1>

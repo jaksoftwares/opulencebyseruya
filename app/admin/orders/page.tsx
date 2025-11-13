@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, Phone, RefreshCw, Truck, CheckCircle, XCircle, Clock, Package, CreditCard, DollarSign } from 'lucide-react';
+import { Eye, Phone, RefreshCw, Truck, CheckCircle, XCircle, Clock, Package, CreditCard, DollarSign, ShoppingCart, AlertCircle, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -226,6 +226,72 @@ export default function AdminOrdersPage() {
     <div className="min-h-screen bg-gray-50">
       <AdminNav />
       <div className="container mx-auto px-4 py-8">
+
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <ShoppingCart className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Orders</p>
+                  <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Clock className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Pending Orders</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {orders.filter(order => order.status.toLowerCase() === 'pending').length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Completed Orders</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {orders.filter(order => order.status.toLowerCase() === 'delivered').length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    KES {orders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="flex justify-between items-center mb-8">
           <h1 className="font-serif text-3xl font-bold text-gray-900">Orders</h1>
           <Button

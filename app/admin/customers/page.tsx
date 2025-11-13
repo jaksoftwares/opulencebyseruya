@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, RefreshCw } from 'lucide-react';
+import { Phone, RefreshCw, Users, CheckCircle, Shield, UserPlus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -115,6 +115,75 @@ export default function AdminCustomersPage() {
     <div className="min-h-screen bg-gray-50">
       <AdminNav />
       <div className="container mx-auto px-4 py-8">
+
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Customers</p>
+                  <p className="text-2xl font-bold text-gray-900">{customers.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Active Customers</p>
+                  <p className="text-2xl font-bold text-gray-900">{customers.filter(c => c.is_active).length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Shield className="h-6 w-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Admin Users</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {customers.filter(c => c.role === 'admin' || c.role === 'super_admin').length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <UserPlus className="h-6 w-6 text-amber-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">New This Month</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {customers.filter(c => {
+                      const createdDate = new Date(c.created_at);
+                      const now = new Date();
+                      return createdDate.getMonth() === now.getMonth() &&
+                             createdDate.getFullYear() === now.getFullYear();
+                    }).length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="flex justify-between items-center mb-8">
           <h1 className="font-serif text-3xl font-bold text-gray-900">Customers</h1>
           <div className="flex items-center gap-4">

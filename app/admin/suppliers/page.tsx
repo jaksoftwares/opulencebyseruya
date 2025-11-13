@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Eye, Phone, Mail, MapPin, Building, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Phone, Mail, MapPin, Building, Package, Users, CheckCircle, DollarSign } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -438,6 +438,70 @@ export default function AdminSuppliersPage() {
     <div className="min-h-screen bg-gray-50">
       <AdminNav />
       <div className="container mx-auto px-4 py-8">
+
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Suppliers</p>
+                  <p className="text-2xl font-bold text-gray-900">{suppliers.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Active Suppliers</p>
+                  <p className="text-2xl font-bold text-gray-900">{suppliers.filter(s => s.is_active).length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Package className="h-6 w-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">With Products</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {suppliers.filter(s => supplierProducts.some(sp => sp.supplier_id === s.id)).length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-amber-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Credit Limit</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    KES {suppliers.reduce((sum, s) => sum + (s.credit_limit || 0), 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="font-serif text-3xl font-bold text-gray-900">Suppliers</h1>
@@ -742,7 +806,7 @@ export default function AdminSuppliersPage() {
                           <div className="flex flex-wrap gap-1 mt-1">
                             {supplierProducts.filter(sp => sp.supplier_id === viewingSupplier.id).map((sp, index) => (
                               <Badge key={index} variant="outline" className="text-xs">
-                                {sp.products.name} (KES {sp.purchase_price})
+                                {sp.products?.name || 'Unknown Product'} (KES {sp.purchase_price})
                               </Badge>
                             ))}
                           </div>
@@ -813,8 +877,8 @@ export default function AdminSuppliersPage() {
                         <div key={sp.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="flex items-center gap-3">
                             <div>
-                              <p className="font-medium">{sp.products.name}</p>
-                              <p className="text-sm text-gray-600">SKU: {sp.products.sku}</p>
+                              <p className="font-medium">{sp.products?.name || 'Unknown Product'}</p>
+                              <p className="text-sm text-gray-600">SKU: {sp.products?.sku || 'N/A'}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
@@ -927,7 +991,7 @@ export default function AdminSuppliersPage() {
                           <div className="flex flex-wrap gap-1">
                             {supplierProducts.filter(sp => sp.supplier_id === supplier.id).slice(0, 2).map((sp, index) => (
                               <Badge key={index} variant="outline" className="text-xs">
-                                {sp.products.name}
+                                {sp.products?.name || 'Unknown Product'}
                               </Badge>
                             ))}
                             {supplierProducts.filter(sp => sp.supplier_id === supplier.id).length > 2 && (
