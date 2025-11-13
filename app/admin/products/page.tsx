@@ -1797,7 +1797,6 @@ export default function AdminProductsPage() {
                                 checked={product.is_active}
                                 onCheckedChange={() => handleStatusToggle(product.id, 'is_active', product.is_active)}
                                 disabled={updatingStatus === `${product.id}-is_active`}
-                                size="sm"
                               />
                             </div>
                             <div className="flex items-center justify-between">
@@ -1806,7 +1805,6 @@ export default function AdminProductsPage() {
                                 checked={product.is_featured}
                                 onCheckedChange={() => handleStatusToggle(product.id, 'is_featured', product.is_featured)}
                                 disabled={updatingStatus === `${product.id}-is_featured`}
-                                size="sm"
                               />
                             </div>
                             <div className="flex items-center justify-between">
@@ -1815,7 +1813,6 @@ export default function AdminProductsPage() {
                                 checked={product.is_top_deal}
                                 onCheckedChange={() => handleStatusToggle(product.id, 'is_top_deal', product.is_top_deal)}
                                 disabled={updatingStatus === `${product.id}-is_top_deal`}
-                                size="sm"
                               />
                             </div>
                             <div className="flex items-center justify-between">
@@ -1824,7 +1821,6 @@ export default function AdminProductsPage() {
                                 checked={product.is_new_arrival}
                                 onCheckedChange={() => handleStatusToggle(product.id, 'is_new_arrival', product.is_new_arrival)}
                                 disabled={updatingStatus === `${product.id}-is_new_arrival`}
-                                size="sm"
                               />
                             </div>
                           </div>
