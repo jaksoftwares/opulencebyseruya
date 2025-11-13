@@ -290,9 +290,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else if (persistedData) {
           // Use persisted data if no active session but we have persisted data
-          console.log('Using persisted auth data');
-          setUser(persistedData.user);
-          setCustomer(persistedData.customer);
+          console.log('Using persisted auth data, validating session...');
+
+          // Try to refresh the session to ensure it's still valid
+          const refreshed = await refreshSession();
+          if (refreshed) {
+            console.log('Session refreshed successfully with persisted data');
+            // Get the refreshed session data
+            const { data: { session: newSession } } = await supabase.auth.getSession();
+            if (newSession?.user) {
+              setUser(newSession.user);
+              // Re-fetch customer data to ensure it's current
+              const customerData = await fetchCustomer(newSession.user.id, newSession.user.email, newSession.user.user_metadata);
+              if (customerData) {
+                setCustomer(customerData);
+                // Update persisted data with fresh session
+                const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+                localStorage.setItem('opulence_auth', JSON.stringify({
+                  user: newSession.user,
+                  customer: customerData,
+                  expiresAt: Date.now() + sevenDaysMs,
+                }));
+              } else {
+                console.log('Failed to fetch customer data after refresh, clearing persisted data');
+                localStorage.removeItem('opulence_auth');
+                setUser(null);
+                setCustomer(null);
+              }
+            } else {
+              console.log('No valid session after refresh, clearing persisted data');
+              localStorage.removeItem('opulence_auth');
+              setUser(null);
+              setCustomer(null);
+            }
+          } else {
+            console.log('Session refresh failed, clearing persisted data');
+            localStorage.removeItem('opulence_auth');
+            setUser(null);
+            setCustomer(null);
+          }
         } else {
           setUser(null);
           setCustomer(null);
