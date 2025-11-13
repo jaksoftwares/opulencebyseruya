@@ -67,7 +67,7 @@ interface OrderItem {
 
 export default function AdminOrdersPage() {
   const router = useRouter();
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -77,14 +77,14 @@ export default function AdminOrdersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && customer) {
       if (!isAdmin) {
         router.push('/login');
         return;
       }
       fetchOrders();
     }
-  }, [isAdmin, authLoading, router]);
+  }, [isAdmin, authLoading, customer, router]);
 
   const fetchOrders = async (isRefresh = false) => {
     try {

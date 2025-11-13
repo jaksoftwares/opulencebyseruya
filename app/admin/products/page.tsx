@@ -65,7 +65,7 @@ interface Supplier {
 
 export default function AdminProductsPage() {
   const router = useRouter();
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -126,7 +126,7 @@ export default function AdminProductsPage() {
   const [existingImages, setExistingImages] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && customer) {
       if (!isAdmin) {
         router.push('/login');
         return;
@@ -134,7 +134,7 @@ export default function AdminProductsPage() {
         fetchData();
       }
     }
-  }, [isAdmin, authLoading, router]);
+  }, [isAdmin, authLoading, customer, router]);
 
   const fetchData = async (isRefresh = false) => {
     try {

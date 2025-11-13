@@ -54,7 +54,7 @@ interface Payment {
 
 export default function AdminPaymentsPage() {
   const router = useRouter();
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -96,10 +96,10 @@ export default function AdminPaymentsPage() {
   };
 
   useEffect(() => {
-    if (!authLoading && isAdmin) {
+    if (!authLoading && customer && isAdmin) {
       fetchPayments();
     }
-  }, [isAdmin, authLoading]);
+  }, [isAdmin, authLoading, customer]);
 
   const handleViewPayment = (payment: Payment) => {
     setSelectedPayment(payment);

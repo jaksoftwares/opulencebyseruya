@@ -23,7 +23,7 @@ interface Subscriber {
 
 export default function NewsletterAdmin() {
   const router = useRouter();
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, customer, loading: authLoading } = useAuth();
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,7 +31,7 @@ export default function NewsletterAdmin() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && customer) {
       if (!isAdmin) {
         router.push('/login');
         return;
@@ -39,7 +39,7 @@ export default function NewsletterAdmin() {
         fetchSubscribers();
       }
     }
-  }, [isAdmin, authLoading, router]);
+  }, [isAdmin, authLoading, customer, router]);
 
   const fetchSubscribers = async () => {
     try {

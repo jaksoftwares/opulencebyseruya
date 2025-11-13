@@ -43,7 +43,7 @@ export default function AdminSettingsPage() {
   });
 
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && customer) {
       if (!isAdmin) {
         router.push('/login');
         return;

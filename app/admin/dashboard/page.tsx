@@ -20,7 +20,7 @@ interface Stats {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, customer, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<Stats>({
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
   }, [isAdmin, authLoading, loading]);
 
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && customer) {
       if (!isAdmin) {
         router.push('/login');
         return;
@@ -55,7 +55,7 @@ export default function AdminDashboard() {
         fetchStats();
       }
     }
-  }, [isAdmin, authLoading, router]);
+  }, [isAdmin, authLoading, customer, router]);
 
   const fetchStats = useCallback(async (isRefresh = false) => {
     try {
