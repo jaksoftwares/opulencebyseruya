@@ -40,7 +40,7 @@ export default function ShopPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [showFilters, setShowFilters] = useState(false);
-  const [gridCols, setGridCols] = useState<3 | 4>(5);
+  const [gridCols, setGridCols] = useState<number>(5);
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
   const [showOnlyFeatured, setShowOnlyFeatured] = useState(false);
 
@@ -408,7 +408,7 @@ export default function ShopPage() {
                   </Button>
                 </div>
               ) : (
-                <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 ${gridCols === 3 ? 'xl:grid-cols-5' : 'xl:grid-cols-6'} gap-4`}>
+                <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 ${gridCols === 5 ? 'xl:grid-cols-5' : 'xl:grid-cols-6'} gap-4`}>
                   {filteredProducts.map((product) => (
                     <ProductCard
                       key={product.id}
