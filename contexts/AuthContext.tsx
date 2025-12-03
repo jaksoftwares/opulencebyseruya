@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Also check for known admin emails as fallback
-      if (!adminData && normalizedEmail === 'admin@opulence.com') {
+      if (!adminData && normalizedEmail === 'admin@opulencebyseruya.co.ke') {
         adminData = { role: 'super_admin', is_active: true };
       }
 
@@ -509,7 +509,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Also check for known admin emails as fallback
           const userEmail = data.user.email || email;
-          if (!adminData && userEmail.toLowerCase() === 'admin@opulence.com') {
+          if (!adminData && userEmail.toLowerCase() === 'admin@opulencebyseruya.co.ke') {
             console.log('Recognized known admin email, granting super_admin access');
             adminData = { role: 'super_admin', is_active: true };
           }

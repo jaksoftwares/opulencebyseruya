@@ -28,7 +28,7 @@ export async function sendOrderNotificationEmail(orderData: OrderEmailData) {
   try {
     const { data, error } = await resend.emails.send({
       from: 'Opulence by Seruya <orders@opulencebyseruya.co.ke>',
-      to: ['opulenceseruya@gmail.com'],
+      to: ['opulencebyseruya@gmail.com'],
       subject: `New Order Received - ${orderData.orderNumber}`,
       html: generateOrderEmailHTML(orderData),
     });
@@ -204,7 +204,7 @@ function generateOrderEmailHTML(order: OrderEmailData): string {
 
         <div style="margin-top: 30px; text-align: center; color: #6b7280; font-size: 14px;">
           <p>This order was placed through the Opulence by Seruya online store.</p>
-          <p>Need help? Contact us at <a href="mailto:opulenceseruya@gmail.com" style="color: #3b82f6;">opulenceseruya@gmail.com</a></p>
+          <p>Need help? Contact us at <a href="mailto:opulencebyseruya@gmail.com" style="color: #3b82f6;">opulencebyseruya@gmail.com</a></p>
         </div>
       </div>
     </body>
@@ -340,7 +340,7 @@ function generateCustomerOrderEmailHTML(order: OrderEmailData): string {
             </div>
             <div>
               <strong style="color: #374151;">Email:</strong><br>
-              <a href="mailto:opulenceseruya@gmail.com" style="color: #3b82f6;">opulenceseruya@gmail.com</a>
+              <a href="mailto:opulencebyseruya@gmail.com" style="color: #3b82f6;">opulencebyseruya@gmail.com</a>
             </div>
           </div>
         </div>

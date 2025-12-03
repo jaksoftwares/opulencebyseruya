@@ -117,8 +117,8 @@ export default function NotFoundPage() {
                     <Mail className="h-5 w-5 text-amber-600" />
                     <div>
                       <div className="font-medium">Email us</div>
-                      <a href="mailto:support@opulence.com" className="text-amber-600 hover:underline">
-                        support@opulence.com
+                      <a href="mailto:support@opulencebyseruya.co.ke" className="text-amber-600 hover:underline">
+                        support@opulencebyseruya.co.ke
                       </a>
                     </div>
                   </div>

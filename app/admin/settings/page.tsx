@@ -35,7 +35,7 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<SystemSettings>({
     siteName: 'Opulence by Seruya',
     siteDescription: 'Luxury Living for Every Home',
-    contactEmail: 'info@opulence.com',
+    contactEmail: 'info@opulencebyseruya.co.ke',
     contactPhone: '+254 742 617 839',
     currency: 'KES',
     maintenanceMode: false,
@@ -60,7 +60,7 @@ export default function AdminSettingsPage() {
       setSettings({
         siteName: 'Opulence by Seruya',
         siteDescription: 'Luxury Living for Every Home',
-        contactEmail: 'info@opulence.com',
+        contactEmail: 'info@opulencebyseruya.co.ke',
         contactPhone: '+254 742 617 839',
         currency: 'KES',
         maintenanceMode: false,
