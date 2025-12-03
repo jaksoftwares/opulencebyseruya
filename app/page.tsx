@@ -3,6 +3,7 @@
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Hero from '@/components/home/Hero';
+import ChristmasDeals from '@/components/home/ChristmasDeals';
 import FeaturedCategories from '@/components/home/FeaturedCategories';
 import FeaturedProducts from '@/components/home/FeaturedProducts';
 import TopDeals from '@/components/home/TopDeals';
@@ -18,6 +19,9 @@ export default function Home() {
       <main className="flex-1">
         {/* Hero Section - Interactive with luxurious image backgrounds */}
         <Hero />
+        
+        {/* Christmas Deals Section - Interactive and product-oriented section for Christmas deals */}
+        <ChristmasDeals />
         
         {/* Featured Categories - Enhanced with vibrant gradients and hover effects */}
         <FeaturedCategories />

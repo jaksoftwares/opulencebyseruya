@@ -43,7 +43,7 @@ export default function Hero() {
   const slide = heroSlides[currentSlide];
 
   return (
-    <section className="relative h-[85vh] min-h-[500px] sm:min-h-[600px] md:min-h-[700px] overflow-hidden">
+    <section className="relative h-[42.5vh] min-h-[350px] sm:min-h-[400px] md:min-h-[450px] overflow-hidden">
       {/* Background Image Layer */}
       <div className="absolute inset-0">
         {heroSlides.map((s, idx) => (
