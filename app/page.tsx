@@ -4,11 +4,12 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Hero from '@/components/home/Hero';
 import FeaturedCategories from '@/components/home/FeaturedCategories';
+import PromotionalBanners from '@/components/home/PromotionalBanners';
+import CategoryRecommendations from '@/components/home/CategoryRecommendations';
 import FeaturedProducts from '@/components/home/FeaturedProducts';
+import TrendingProducts from '@/components/home/TrendingProducts';
 import TopDeals from '@/components/home/TopDeals';
 import NewArrivals from '@/components/home/NewArrivals';
-import WhyChooseUs from '@/components/home/WhyChooseUs';
-import Testimonials from '@/components/home/Testimonials';
 import Newsletter from '@/components/home/Newsletter';
 
 export default function Home() {
@@ -16,28 +17,29 @@ export default function Home() {
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1">
-        {/* Hero Section - Interactive with luxurious image backgrounds */}
+        {/* Hero Section - Interactive with search and category navigation */}
         <Hero />
         
-        {/* Featured Categories - Enhanced with vibrant gradients and hover effects */}
+        {/* Top Deals - Flash deals with countdown timer - Placed prominently after hero */}
+        <TopDeals />
+        
+        {/* Featured Categories */}
         <FeaturedCategories />
+        
+        {/* Promotional Banners */}
+        <PromotionalBanners />
+        
+        {/* Category Recommendations - Based on user preferences */}
+        <CategoryRecommendations />
+        
+        {/* Trending Products - Products sorted by sales */}
+        <TrendingProducts />
         
         {/* Featured Products - Premium product showcase with badges and ratings */}
         <FeaturedProducts />
         
-        {/* Top Deals - Hot deals section with countdown timer */}
-        {/* ✅ This component correctly filters products by: is_active=true AND is_top_deal=true */}
-        <TopDeals />
-        
         {/* New Arrivals - Latest products with fresh arrival badges */}
-        {/* ✅ This component correctly filters products by: is_active=true AND is_new_arrival=true */}
         <NewArrivals />
-        
-        {/* Why Choose Us - Trust building section with animated cards */}
-        <WhyChooseUs />
-        
-        {/* Testimonials - Customer reviews with carousel */}
-        <Testimonials />
         
         {/* Newsletter - Email subscription with benefits */}
         <Newsletter />

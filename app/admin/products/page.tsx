@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface Product {
   id: string;
@@ -625,7 +626,7 @@ export default function AdminProductsPage() {
   };
 
   // Bulk status update handler
-  const handleBulkStatusUpdate = async () => {
+  const executeBulkStatusUpdate = async () => {
     if (!bulkStatusOperation || selectedProducts.length === 0) {
       toast({
         title: 'No Selection',
@@ -675,6 +676,27 @@ export default function AdminProductsPage() {
         variant: 'destructive',
       });
     }
+  };
+
+  // Get human-readable action name for confirmation dialog
+  const getBulkActionName = () => {
+    if (!bulkStatusOperation) return '';
+    const [statusType, action] = bulkStatusOperation.split('-');
+    const statusValue = action === 'enable';
+    
+    const statusNames: Record<string, string> = {
+      'is_active': 'Active Status',
+      'is_featured': 'Featured Status',
+      'is_top_deal': 'Top Deal Status',
+      'is_new_arrival': 'New Arrival Status'
+    };
+    
+    const actionNames: Record<string, string> = {
+      'enable': statusValue ? 'Enable' : 'Disable',
+      'disable': 'Disable'
+    };
+    
+    return `${actionNames[action] || 'Update'} ${statusNames[statusType] || statusType}`;
   };
 
   const resetForm = () => {
@@ -946,13 +968,31 @@ export default function AdminProductsPage() {
                   </SelectContent>
                 </Select>
 
-                <Button
-                  onClick={handleBulkStatusUpdate}
-                  disabled={!bulkStatusOperation}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Apply to Selected
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      disabled={!bulkStatusOperation}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Apply to Selected
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirm Bulk Update</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to {getBulkActionName().toLowerCase()} for {selectedProducts.length} selected product{selectedProducts.length > 1 ? 's' : ''}?
+                        This action will affect all the products you've selected and cannot be easily undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={executeBulkStatusUpdate} className="bg-blue-600 hover:bg-blue-700">
+                        Yes, Apply Changes
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
 
                 <Button
                   variant="outline"

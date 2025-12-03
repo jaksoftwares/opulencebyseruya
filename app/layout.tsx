@@ -2,9 +2,13 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Playfair_Display, Inter } from 'next/font/google';
 import { CartProvider } from '@/contexts/CartContext';
+import { OptimisticCartProvider } from '@/contexts/OptimisticCartContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 import { Analytics} from '@vercel/analytics/react';
+import QueryProvider from '@/components/providers/QueryProvider';
+import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
+import { SmartHydrationProvider } from '@/components/data/SmartHydration';
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -83,12 +87,19 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
       <body className={inter.className}>
-        <AuthProvider>
-          <CartProvider>
-            {children}
-            <Toaster />
-          </CartProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <SmartHydrationProvider>
+            <AuthProvider>
+              <CartProvider>
+                <OptimisticCartProvider>
+                  <ServiceWorkerRegistration />
+                  {children}
+                  <Toaster />
+                </OptimisticCartProvider>
+              </CartProvider>
+            </AuthProvider>
+          </SmartHydrationProvider>
+        </QueryProvider>
       </body>
     </html>
   );

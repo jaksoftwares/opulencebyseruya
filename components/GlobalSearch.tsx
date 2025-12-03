@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useProductSearch } from '@/hooks/api';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface SearchResult {
   id: string;
@@ -25,12 +27,23 @@ interface GlobalSearchProps {
 export default function GlobalSearch({ className = '' }: GlobalSearchProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  
+  // Use debounce for search query to reduce API calls
+  const debouncedSearchQuery = useDebounce(query, 300);
+  
+  // Enable search when there's a debounced query and search is open
+  const shouldSearch = isOpen && !!debouncedSearchQuery.trim();
+  
+  // Use React Query for cached search results
+  const { data: searchResults = [], isLoading: searchLoading } = useProductSearch(
+    debouncedSearchQuery,
+    shouldSearch
+  );
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -53,62 +66,11 @@ export default function GlobalSearch({ className = '' }: GlobalSearchProps) {
     localStorage.setItem('opulence-recent-searches', JSON.stringify(updated));
   };
 
-  // Search products
-  const searchProducts = async (searchTerm: string) => {
-    if (!searchTerm.trim()) {
-      setResults([]);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          slug,
-          price,
-          images,
-          categories!inner(name)
-        `)
-        .eq('is_active', true)
-        .ilike('name', `%${searchTerm}%`)
-        .limit(8);
-
-      if (error) {
-        console.error('Search error:', error);
-        setResults([]);
-      } else {
-        const formattedResults: SearchResult[] = (data || []).map(item => ({
-          id: item.id,
-          name: item.name,
-          slug: item.slug,
-          price: item.price,
-          images: item.images,
-          category_name: (item.categories as any)?.name,
-        }));
-        setResults(formattedResults);
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Debounced search
+  // Update debounced query when search opens
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (query && isOpen) {
-        searchProducts(query);
-      } else {
-        setResults([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
+    if (isOpen) {
+      setDebouncedQuery(query);
+    }
   }, [query, isOpen]);
 
   // Handle click outside
@@ -218,17 +180,17 @@ export default function GlobalSearch({ className = '' }: GlobalSearchProps) {
 
           {/* Search Results */}
           <div className="max-h-96 overflow-y-auto">
-            {loading && (
+            {searchLoading && debouncedQuery && (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
                 <span className="ml-2 text-gray-600">Searching...</span>
               </div>
             )}
 
-            {!loading && query && results.length === 0 && (
+            {!searchLoading && debouncedQuery && searchResults.length === 0 && (
               <div className="text-center py-8">
                 <div className="text-4xl mb-2">🔍</div>
-                <p className="text-gray-600">No products found for &ldquo;{query}&rdquo;</p>
+                <p className="text-gray-600">No products found for &ldquo;{debouncedQuery}&rdquo;</p>
                 <Button
                   onClick={() => handleSearch(query)}
                   variant="outline"
@@ -240,12 +202,12 @@ export default function GlobalSearch({ className = '' }: GlobalSearchProps) {
               </div>
             )}
 
-            {!loading && results.length > 0 && (
+            {!searchLoading && searchResults.length > 0 && (
               <div className="border-t">
                 <div className="p-3 bg-gray-50 text-sm font-medium text-gray-700">
-                  Products ({results.length})
+                  Products ({searchResults.length})
                 </div>
-                {results.map((product) => (
+                {searchResults.map((product: any) => (
                   <Link
                     key={product.id}
                     href={`/products/${product.slug}`}
@@ -257,7 +219,7 @@ export default function GlobalSearch({ className = '' }: GlobalSearchProps) {
                     className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors border-b last:border-b-0"
                   >
                     <div className="relative w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                      {product.images[0] && (
+                      {product.images && product.images[0] && (
                         <Image
                           src={product.images[0]}
                           alt={product.name}

@@ -2,35 +2,42 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { TrendingUp, Clock, ArrowRight, Star, Gift, Zap } from 'lucide-react';
+import InlineSearch from '@/components/InlineSearch';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
 
 const heroSlides = [
   {
-    title: "Luxury Living",
-    subtitle: "for Every Home",
-    description: "Transform your space with our curated collection of premium home essentials",
-    image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=2000",
-    accent: "amber"
+    title: "Shop Smart",
+    subtitle: "Save More",
+    description: "Discover amazing deals on thousands of products",
+    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=2000",
+    accent: "orange",
+    badge: "Up to 70% OFF"
   },
   {
-    title: "Elegant Living",
-    subtitle: "Redefined",
-    description: "Discover timeless pieces that blend sophistication with everyday comfort",
-    image: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=2000",
-    accent: "gold"
+    title: "Flash Sales",
+    subtitle: "Limited Time",
+    description: "Incredible deals that won't last long",
+    image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2000",
+    accent: "red",
+    badge: "Flash Deal"
   },
   {
-    title: "Curated Excellence",
-    subtitle: "Delivered to You",
-    description: "Experience the finest selection of home decor and lifestyle essentials",
-    image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2000",
-    accent: "amber"
+    title: "New Arrivals",
+    subtitle: "Fresh Picks",
+    description: "Latest products just for you",
+    image: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?q=80&w=2000",
+    accent: "blue",
+    badge: "New"
   }
 ];
 
 export default function Hero() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
     if (!isAutoPlaying) return;
@@ -40,155 +47,170 @@ export default function Hero() {
     return () => clearInterval(timer);
   }, [isAutoPlaying]);
 
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase
+        .from('categories')
+        .select('id, name, slug')
+        .eq('is_active', true)
+        .order('display_order')
+        .limit(10);
+      
+      if (data) setCategories(data);
+    };
+    fetchCategories();
+  }, []);
+
   const slide = heroSlides[currentSlide];
 
   return (
-    <section className="relative h-[85vh] min-h-[500px] sm:min-h-[600px] md:min-h-[700px] overflow-hidden">
-      {/* Background Image Layer */}
-      <div className="absolute inset-0">
-        {heroSlides.map((s, idx) => (
-          <div
-            key={idx}
-            className={`absolute inset-0 transition-opacity duration-1000 ${
-              idx === currentSlide ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            <div
-              className="absolute inset-0 bg-cover bg-center transform scale-105 animate-[zoomIn_20s_ease-out]"
-              style={{
-                backgroundImage: `url(${s.image})`,
-                animation: idx === currentSlide ? 'zoomIn 20s ease-out forwards' : 'none',
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-b sm:bg-gradient-to-r from-black/80 via-black/60 to-transparent" />
-          </div>
-        ))}
-      </div>
-
-      {/* Main Content */}
-      <div className="relative h-full container mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
-        <div className="max-w-2xl text-white">
-          {/* Tagline */}
-          <div className="flex items-center gap-2 mb-4 sm:mb-6 animate-fadeIn">
-            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-amber-400" />
-            <span className="text-amber-400 font-medium tracking-wider uppercase text-xs sm:text-sm">
-              Opulence by Seruya
-            </span>
-          </div>
-
-          {/* Title */}
-          <h1 className="font-serif text-4xl sm:text-5xl md:text-7xl font-bold mb-3 sm:mb-4 leading-tight animate-slideUp">
-            {slide.title}
-            <span className="block text-amber-400 mt-1 sm:mt-2">{slide.subtitle}</span>
-          </h1>
-
-          {/* Description */}
-          <p className="text-base sm:text-lg md:text-2xl text-gray-200 mb-6 sm:mb-8 leading-relaxed animate-slideUp animation-delay-200">
-            {slide.description}
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 animate-slideUp animation-delay-400">
-            <Link href="/shop">
-              <button className="group bg-amber-500 hover:bg-amber-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg text-base sm:text-lg font-semibold transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/50 hover:scale-105 flex items-center justify-center gap-2">
-                Explore Collection
-                <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </Link>
-            <Link href="/categories">
-              <button className="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border-2 border-white/30 px-6 sm:px-8 py-3 sm:py-4 rounded-lg text-base sm:text-lg font-semibold transition-all duration-300 hover:scale-105">
-                Shop by Category
-              </button>
-            </Link>
-          </div>
-
-          {/* Stats Section */}
-          <div className="mt-10 sm:mt-12 animate-slideUp animation-delay-600">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center sm:text-left">
-              <div>
-                <div className="text-3xl sm:text-4xl font-bold text-amber-400">500+</div>
-                <div className="text-sm sm:text-base text-gray-300">Premium Products</div>
+    <section className="relative min-h-[500px] md:min-h-[600px] bg-gradient-to-br from-orange-50 to-red-50 overflow-hidden">
+      <div className="absolute inset-0 bg-white/90" />
+      
+      <div className="relative container mx-auto px-4 py-8 md:py-12">
+        <div className="grid lg:grid-cols-4 gap-8 h-full">
+          {/* Category Navigation */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg shadow-lg border overflow-hidden">
+              <div className="bg-red-600 text-white px-4 py-3 font-semibold text-sm flex items-center gap-2">
+                <Gift className="h-4 w-4" />
+                SHOP BY CATEGORY
               </div>
-              <div>
-                <div className="text-3xl sm:text-4xl font-bold text-amber-400">10k+</div>
-                <div className="text-sm sm:text-base text-gray-300">Happy Customers</div>
+              <div className="divide-y">
+                {categories.slice(0, 8).map((category) => (
+                  <Link
+                    key={category.id}
+                    href={`/categories/${category.slug}`}
+                    className="block px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 hover:text-red-600 transition-colors flex items-center justify-between"
+                  >
+                    <span>{category.name}</span>
+                    <ArrowRight className="h-3 w-3 text-gray-400" />
+                  </Link>
+                ))}
+                <Link
+                  href="/categories"
+                  className="block px-4 py-3 text-red-600 hover:bg-red-50 font-medium text-sm flex items-center justify-center gap-1"
+                >
+                  View All Categories
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
               </div>
-              <div>
-                <div className="text-3xl sm:text-4xl font-bold text-amber-400">100%</div>
-                <div className="text-sm sm:text-base text-gray-300">Quality Guaranteed</div>
+            </div>
+          </div>
+
+          {/* Main Hero Content */}
+          <div className="lg:col-span-3">
+            <div className="grid md:grid-cols-2 gap-6 h-full">
+              {/* Left: Search & CTA */}
+              <div className="flex flex-col justify-center">
+                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                  <div className="mb-4">
+                    <div className="text-sm font-medium text-red-600 mb-2">🔥 FLASH SALE</div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                      {slide.title}
+                    </h1>
+                    <p className="text-gray-600 text-sm">{slide.description}</p>
+                  </div>
+                  
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <InlineSearch className="w-full" />
+                  </div>
+                  
+                  {/* Quick Search Tags */}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {['Electronics', 'Fashion', 'Home', 'Sports'].map((tag) => (
+                      <button
+                        key={tag}
+                        className="px-3 py-1 bg-gray-100 hover:bg-red-100 text-gray-700 hover:text-red-600 rounded-full text-xs transition-colors"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Promotional Banners */}
+                <div className="grid grid-cols-2 gap-4">
+                  <Link href="/shop?deal=flash" className="group">
+                    <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-lg p-4 text-white">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Zap className="h-5 w-5" />
+                        <span className="text-sm font-medium">FLASH DEALS</span>
+                      </div>
+                      <div className="text-lg font-bold mb-1">Up to 80% OFF</div>
+                      <div className="text-xs opacity-90">Limited time offers</div>
+                    </div>
+                  </Link>
+                  <Link href="/shop?tag=new" className="group">
+                    <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg p-4 text-white">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Star className="h-5 w-5" />
+                        <span className="text-sm font-medium">NEW ARRIVALS</span>
+                      </div>
+                      <div className="text-lg font-bold mb-1">Fresh Picks</div>
+                      <div className="text-xs opacity-90">Latest products daily</div>
+                    </div>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right: Featured Banner */}
+              <div className="relative">
+                <div className="bg-white rounded-lg shadow-lg overflow-hidden h-full">
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{
+                      backgroundImage: `url(${slide.image})`,
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                  <div className="relative h-full flex flex-col justify-end p-6 text-white">
+                    <div className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold mb-3 w-fit">
+                      {slide.badge}
+                    </div>
+                    <h2 className="text-xl font-bold mb-2">{slide.title} {slide.subtitle}</h2>
+                    <p className="text-sm opacity-90 mb-4">{slide.description}</p>
+                    <Link href="/shop">
+                      <Button className="bg-white text-red-600 hover:bg-gray-100">
+                        Shop Now
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Slide Indicators */}
-      <div className="absolute bottom-6 sm:bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2 sm:gap-3 z-10">
-        {heroSlides.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={() => {
-              setCurrentSlide(idx);
-              setIsAutoPlaying(false);
-            }}
-            className={`h-1.5 sm:h-2 rounded-full transition-all duration-300 ${
-              idx === currentSlide
-                ? 'w-8 sm:w-12 bg-amber-400'
-                : 'w-4 sm:w-8 bg-white/50 hover:bg-white/70'
-            }`}
-          />
-        ))}
+      {/* Bottom Stats Bar */}
+      <div className="bg-white border-t">
+        <div className="container mx-auto px-4 py-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <div className="text-lg font-bold text-red-600">10,000+</div>
+              <div className="text-xs text-gray-600">Products</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-red-600">50,000+</div>
+              <div className="text-xs text-gray-600">Customers</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-red-600">100%</div>
+              <div className="text-xs text-gray-600">Secure Payment</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-red-600">24/7</div>
+              <div className="text-xs text-gray-600">Support</div>
+            </div>
+          </div>
+        </div>
       </div>
-
-      <style jsx>{`
-        @keyframes zoomIn {
-          from {
-            transform: scale(1);
-          }
-          to {
-            transform: scale(1.1);
-          }
-        }
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.8s ease-out;
-        }
-        .animate-slideUp {
-          animation: slideUp 0.8s ease-out;
-        }
-        .animation-delay-200 {
-          animation-delay: 0.2s;
-          opacity: 0;
-          animation-fill-mode: forwards;
-        }
-        .animation-delay-400 {
-          animation-delay: 0.4s;
-          opacity: 0;
-          animation-fill-mode: forwards;
-        }
-        .animation-delay-600 {
-          animation-delay: 0.6s;
-          opacity: 0;
-          animation-fill-mode: forwards;
-        }
-      `}</style>
     </section>
   );
 }
+
+

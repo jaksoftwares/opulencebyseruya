@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingCart, Menu, Search, User, Phone, LogOut, Settings, UserCircle } from 'lucide-react';
+import { ShoppingCart, Menu, User, Phone, LogOut, Settings, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   DropdownMenu,
@@ -15,7 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import GlobalSearch from '@/components/GlobalSearch';
+import InlineSearch from '@/components/InlineSearch';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 
@@ -35,59 +36,41 @@ export default function Header() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <header className="sticky top-0 z-50 w-full border-b bg-white">
+      {/* Top promotional bar */}
+      <div className="bg-red-600 text-white text-center py-2 text-sm">
+        🔥 FREE SHIPPING on orders over KSh 5,000 | 30-day returns | 24/7 customer support
+      </div>
+      
       <div className="container mx-auto px-4">
-        <div className="flex h-20 items-center justify-between">
+        <div className="flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
             <Image
               src="/opulence.jpg"
-              alt="Opulence by Seruya"
-              width={180}
-              height={60}
-              className="h-14 w-auto"
+              alt="Opulence Store"
+              width={140}
+              height={45}
+              className="h-12 w-auto"
               priority
             />
           </Link>
 
-          <nav className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'text-amber-600 border-b-2 border-amber-600 pb-1'
-                      : 'text-gray-700 hover:text-amber-600'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className={`text-sm font-medium transition-colors ${
-                  pathname.startsWith('/admin')
-                    ? 'text-amber-600 border-b-2 border-amber-600 pb-1'
-                    : 'text-amber-600 hover:text-amber-700'
-                }`}
-              >
-                Admin
-              </Link>
-            )}
-          </nav>
+          {/* Search bar */}
+          <div className="hidden md:flex flex-1 max-w-2xl mx-8">
+            <InlineSearch className="w-full" />
+          </div>
 
           <div className="flex items-center space-x-4">
-            <GlobalSearch />
+            {/* Mobile search */}
+            <div className="md:hidden">
+              <InlineSearch className="w-40" placeholder="Search..." />
+            </div>
 
             <Link href="/cart">
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="h-5 w-5" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-amber-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {cartCount}
                   </span>
                 )}
@@ -167,7 +150,7 @@ export default function Header() {
                 <div className="flex flex-col space-y-4 mt-8">
                   {/* Mobile Search */}
                   <div className="pb-4 border-b">
-                    <GlobalSearch className="w-full" />
+                    <InlineSearch className="w-full" />
                   </div>
                   {navLinks.map((link) => {
                     const isActive = pathname === link.href;
@@ -258,6 +241,51 @@ export default function Header() {
                 </div>
               </SheetContent>
             </Sheet>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Navigation Bar */}
+      <div className="bg-gray-100 border-t">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center space-x-8 py-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 text-sm font-medium">
+                  <Menu className="h-4 w-4" />
+                  All Categories
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>Browse Categories</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {navLinks.slice(0, 6).map((link) => (
+                  <DropdownMenuItem key={link.href} asChild>
+                    <Link href={link.href} className="flex items-center gap-2">
+                      {link.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <nav className="hidden lg:flex items-center space-x-6">
+              {['Flash Deals', 'New Arrivals', 'Bestsellers', 'Clearance', 'Gift Cards'].map((item) => (
+                <Link
+                  key={item}
+                  href={`/shop?tag=${item.toLowerCase().replace(' ', '-')}`}
+                  className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors"
+                >
+                  {item}
+                </Link>
+              ))}
+            </nav>
+
+            <div className="ml-auto hidden md:flex items-center space-x-4 text-xs text-gray-600">
+              <span>🚚 Free Shipping</span>
+              <span>💳 Secure Payment</span>
+              <span>📞 24/7 Support</span>
+            </div>
           </div>
         </div>
       </div>
