@@ -161,9 +161,9 @@ export default function FeaturedProducts() {
       Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
-          className="min-w-[250px] sm:min-w-[280px] bg-white rounded-2xl overflow-hidden shadow-md animate-pulse snap-start"
+          className="min-w-[200px] sm:min-w-[220px] bg-white rounded-2xl overflow-hidden shadow-md animate-pulse snap-start"
         >
-          <div className="h-56 sm:h-64 bg-gray-200" />
+          <div className="h-40 sm:h-48 bg-gray-200" />
           <div className="p-5 space-y-3">
             <div className="h-4 bg-gray-200 rounded w-1/4"></div>
             <div className="h-6 bg-gray-200 rounded w-3/4"></div>
@@ -194,11 +194,11 @@ export default function FeaturedProducts() {
             key={product.id}
             onMouseEnter={() => setHoveredProduct(product.id)}
             onMouseLeave={() => setHoveredProduct(null)}
-            className="group min-w-[250px] sm:min-w-[280px] bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 snap-start"
+            className="group min-w-[200px] sm:min-w-[220px] bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 snap-start"
           >
             {/* Image */}
             <Link href={`/products/${product.slug}`}>
-              <div className="relative h-56 sm:h-64 bg-gray-100 overflow-hidden">
+              <div className="relative h-40 sm:h-48 bg-gray-100 overflow-hidden">
                 <Image
                   src={product.image}
                   alt={product.name}
@@ -228,7 +228,7 @@ export default function FeaturedProducts() {
             </Link>
 
             {/* Product Info */}
-            <div className="p-4 sm:p-5">
+            <div className="p-3 sm:p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
                 <span className="font-semibold text-sm">

@@ -164,7 +164,7 @@ export default function ProductCard({
       >
       {/* Image Container */}
       <Link href={`/products/${slug}`}>
-        <div className="relative h-64 overflow-hidden bg-gray-100">
+        <div className="relative h-48 overflow-hidden bg-gray-100">
           {image ? (
             <Image
               src={image}
@@ -274,10 +274,10 @@ export default function ProductCard({
       </Link>
 
       {/* Product Info */}
-      <div className="p-5">
+      <div className="p-4">
         {/* Rating */}
         {reviews > 0 && (
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-1">
             <div className="flex items-center gap-1">
               <span className="text-amber-400">⭐</span>
               <span className="font-semibold text-sm">{rating}</span>
@@ -288,25 +288,22 @@ export default function ProductCard({
 
         {/* Product Name */}
         <Link href={`/products/${slug}`}>
-          <h3 className="font-bold text-lg text-gray-900 mb-3 group-hover:text-amber-600 transition-colors line-clamp-2 min-h-[56px]">
+          <h3 className="font-bold text-base text-gray-900 mb-2 group-hover:text-amber-600 transition-colors line-clamp-2 min-h-[40px]">
             {name}
           </h3>
         </Link>
 
         {/* Price */}
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-gray-900">
+          <span className="text-lg font-bold text-gray-900">
             KES {price.toLocaleString()}
           </span>
           {compareAtPrice && (
-            <span className="text-sm text-gray-400 line-through">
+            <span className="text-xs text-gray-400 line-through">
               KES {compareAtPrice.toLocaleString()}
             </span>
           )}
         </div>
-
-        {/* SKU */}
-        <p className="text-xs text-gray-400 mt-2">SKU: {sku}</p>
       </div>
       </div>
 
@@ -511,10 +508,6 @@ export default function ProductCard({
 
                     {/* Additional Info */}
                     <div className="border-t pt-4 space-y-2 text-sm text-gray-600">
-                      <div className="flex justify-between">
-                        <span>SKU:</span>
-                        <span className="font-mono">{productDetails.sku}</span>
-                      </div>
                       {productDetails.sold_count && (
                         <div className="flex justify-between">
                           <span>Sold:</span>

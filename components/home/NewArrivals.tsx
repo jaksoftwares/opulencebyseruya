@@ -94,15 +94,15 @@ export default function NewArrivals() {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-12">
           {loading ? (
             Array.from({ length: 8 }).map((_, index) => (
               <div
                 key={index}
                 className="bg-white rounded-2xl overflow-hidden shadow-lg animate-pulse"
               >
-                <div className="h-48 sm:h-56 bg-gray-200"></div>
-                <div className="p-5 space-y-3">
+                <div className="h-40 sm:h-48 bg-gray-200"></div>
+                <div className="p-4 space-y-3">
                   <div className="h-4 bg-gray-200 rounded w-1/3"></div>
                   <div className="h-6 bg-gray-200 rounded w-3/4"></div>
                   <div className="h-6 bg-gray-200 rounded w-1/2"></div>
@@ -122,7 +122,7 @@ export default function NewArrivals() {
               <Link key={product.id} href={`/products/${product.slug}`}>
                 <div className="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
                   {/* Image */}
-                  <div className="relative h-48 sm:h-56 overflow-hidden">
+                  <div className="relative h-40 sm:h-48 overflow-hidden">
                     <Image
                       src={product.image}
                       alt={product.name}
@@ -156,7 +156,7 @@ export default function NewArrivals() {
                   </div>
 
                   {/* Content */}
-                  <div className="p-4 sm:p-5">
+                  <div className="p-3 sm:p-4">
                     {/* Rating */}
                     <div className="flex items-center gap-2 mb-2">
                       <Star className="h-4 w-4 text-amber-400 fill-amber-400" />

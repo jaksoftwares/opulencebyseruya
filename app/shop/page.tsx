@@ -40,7 +40,7 @@ export default function ShopPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [showFilters, setShowFilters] = useState(false);
-  const [gridCols, setGridCols] = useState<3 | 4>(4);
+  const [gridCols, setGridCols] = useState<3 | 4>(5);
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
   const [showOnlyFeatured, setShowOnlyFeatured] = useState(false);
 
@@ -313,18 +313,20 @@ export default function ShopPage() {
                     {/* Grid Toggle */}
                     <div className="hidden md:flex items-center gap-2 border border-gray-200 rounded-lg p-1">
                       <button
-                        onClick={() => setGridCols(3)}
-                        className={`p-2 rounded transition-colors ${
-                          gridCols === 3 ? 'bg-amber-500 text-white' : 'text-gray-400 hover:text-gray-600'
-                        }`}
-                      >
-                        <Grid3x3 className="h-4 w-4" />
-                      </button>
-                      <button
                         onClick={() => setGridCols(4)}
                         className={`p-2 rounded transition-colors ${
                           gridCols === 4 ? 'bg-amber-500 text-white' : 'text-gray-400 hover:text-gray-600'
                         }`}
+                        title="4 columns"
+                      >
+                        <Grid3x3 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setGridCols(5)}
+                        className={`p-2 rounded transition-colors ${
+                          gridCols === 5 ? 'bg-amber-500 text-white' : 'text-gray-400 hover:text-gray-600'
+                        }`}
+                        title="5 columns"
                       >
                         <LayoutGrid className="h-4 w-4" />
                       </button>
@@ -406,7 +408,7 @@ export default function ShopPage() {
                   </Button>
                 </div>
               ) : (
-                <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridCols === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-6`}>
+                <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 ${gridCols === 3 ? 'xl:grid-cols-5' : 'xl:grid-cols-6'} gap-4`}>
                   {filteredProducts.map((product) => (
                     <ProductCard
                       key={product.id}
