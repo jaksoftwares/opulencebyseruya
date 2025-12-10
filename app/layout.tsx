@@ -4,6 +4,7 @@ import { Playfair_Display, Inter } from 'next/font/google';
 import { CartProvider } from '@/contexts/CartContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
+import CookieConsent from '@/components/CookieConsent';
 import { Analytics} from '@vercel/analytics/react';
 
 const playfair = Playfair_Display({
@@ -87,6 +88,7 @@ export default function RootLayout({
           <CartProvider>
             {children}
             <Toaster />
+            <CookieConsent />
           </CartProvider>
         </AuthProvider>
       </body>
