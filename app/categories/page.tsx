@@ -1,6 +1,3 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/Header';
@@ -43,33 +40,24 @@ interface Subcategory {
   is_active: boolean;
 }
 
-export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [loading, setLoading] = useState(true);
+export const revalidate = 60;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const [categoriesRes, subcategoriesRes] = await Promise.all([
-        supabase
-          .from('categories')
-          .select('*')
-          .eq('is_active', true)
-          .order('display_order'),
-        supabase
-          .from('subcategories')
-          .select('*')
-          .eq('is_active', true)
-          .order('display_order')
-      ]);
+export default async function CategoriesPage() {
+  const [categoriesRes, subcategoriesRes] = await Promise.all([
+    supabase
+      .from('categories')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order'),
+    supabase
+      .from('subcategories')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order'),
+  ]);
 
-      if (categoriesRes.data) setCategories(categoriesRes.data);
-      if (subcategoriesRes.data) setSubcategories(subcategoriesRes.data);
-      setLoading(false);
-    };
-
-    fetchData();
-  }, []);
+  const categories: Category[] = categoriesRes.data ?? [];
+  const subcategories: Subcategory[] = subcategoriesRes.data ?? [];
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -87,12 +75,7 @@ export default function CategoriesPage() {
         </div>
 
         <div className="container mx-auto px-4 py-12">
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600">Loading categories...</p>
-            </div>
-          ) : (
-            <div className="space-y-12">
+          <div className="space-y-12">
               {/* Categories Section */}
               <div>
                 <h2 className="font-serif text-3xl font-bold text-gray-900 mb-8">Categories</h2>
@@ -175,7 +158,6 @@ export default function CategoriesPage() {
                 </div>
               )}
             </div>
-          )}
         </div>
       </main>
       <Footer />

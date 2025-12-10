@@ -1,12 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Heart, ShoppingCart, Eye, Star, Gift, Clock } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabase';
 
-interface Product {
+export interface ChristmasDealProduct {
   id: string;
   name: string;
   slug: string;
@@ -19,68 +18,12 @@ interface Product {
   categoryId?: string;
 }
 
-export default function ChristmasDeals() {
-  const [products, setProducts] = useState<Product[]>([]);
+interface ChristmasDealsProps {
+  products: ChristmasDealProduct[];
+}
+
+export default function ChristmasDeals({ products }: ChristmasDealsProps) {
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchChristmasDeals = async () => {
-      try {
-        // First, try to find a Christmas category
-        const { data: christmasCategories } = await supabase
-          .from('categories')
-          .select('id, name, slug')
-          .ilike('name', '%christmas%')
-          .eq('is_active', true)
-          .limit(1);
-
-        let categoryFilter = '';
-        if (christmasCategories && christmasCategories.length > 0) {
-          categoryFilter = `category_id.eq.${christmasCategories[0].id}`;
-        }
-
-        // Fetch Christmas deal products
-        let query = supabase
-          .from('products')
-          .select('*')
-          .eq('is_active', true)
-          .limit(18);
-
-        if (categoryFilter) {
-          query = query.or(categoryFilter);
-        } else {
-          // If no Christmas category, use products with special pricing or marked as deals
-          query = query.or('name.ilike.%christmas%,name.ilike.%holiday%,name.ilike.%gift%');
-        }
-
-        const { data: productsData } = await query.order('created_at', { ascending: false });
-
-        if (productsData) {
-          const formatted: Product[] = productsData.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            slug: p.slug,
-            price: p.price,
-            compareAtPrice: p.original_price || p.compare_at_price,
-            image:
-              p.images?.[0] ||
-              'https://images.unsplash.com/photo-1512389142860-9c449e58a543?q=80&w=800',
-            rating: 4.3 + Math.random() * 0.7,
-            reviews: Math.floor(Math.random() * 150) + 30,
-            isChristmasDeal: true,
-            categoryId: p.category_id,
-          }));
-
-          setProducts(formatted);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchChristmasDeals();
-  }, []);
 
   const calculateDiscount = (price: number, compareAtPrice: number | null) => {
     if (!compareAtPrice || compareAtPrice <= price) return 0;
@@ -138,21 +81,7 @@ export default function ChristmasDeals() {
 
         {/* Products Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
-          {loading ? (
-            Array.from({ length: 18 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-xl overflow-hidden shadow-md animate-pulse"
-              >
-                <div className="h-24 sm:h-28 bg-gradient-to-br from-red-200 to-green-200" />
-                <div className="p-2 space-y-2">
-                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              </div>
-            ))
-          ) : products.length === 0 ? (
+          {products.length === 0 ? (
             <div className="col-span-full text-center py-8">
               <Gift className="h-12 w-12 text-gray-300 mx-auto mb-2" />
               <p className="text-gray-600 text-sm">

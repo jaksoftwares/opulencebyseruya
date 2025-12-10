@@ -1,12 +1,9 @@
-'use client';
-
-import { useState, useEffect } from 'react';
+"use client";
 import { Sparkles, Star } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 
-interface Product {
+export interface NewArrivalProduct {
   id: string;
   name: string;
   slug: string;
@@ -18,53 +15,11 @@ interface Product {
   badge?: 'new' | 'bestseller' | 'trending';
 }
 
-export default function NewArrivals() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+interface NewArrivalsProps {
+  products: NewArrivalProduct[];
+}
 
-  useEffect(() => {
-    const fetchNewArrivals = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(30);
-
-        if (error) {
-          console.error('Error fetching new arrivals:', error);
-          return;
-        }
-
-        if (data) {
-          const formattedProducts: Product[] = data.map((product: any) => ({
-            id: product.id,
-            name: product.name,
-            slug: product.slug,
-            price: product.price,
-            compareAtPrice: product.original_price || product.compare_at_price,
-            image:
-              product.images && product.images.length > 0
-                ? product.images[0]
-                : 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=800',
-            rating: product.rating || (4.0 + Math.random() * 1.0),
-            reviews: product.reviews || Math.floor(Math.random() * 50) + 20,
-            badge: 'new' as const,
-          }));
-
-          setProducts(formattedProducts);
-        }
-      } catch (error) {
-        console.error('Error fetching new arrivals:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNewArrivals();
-  }, []);
-
+export default function NewArrivals({ products }: NewArrivalsProps) {
   return (
     <section className="py-8 md:py-12 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -86,21 +41,7 @@ export default function NewArrivals() {
 
         {/* Products Grid */}
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 sm:gap-3 mb-6">
-          {loading ? (
-            Array.from({ length: 30 }).map((_, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-xl overflow-hidden shadow-md animate-pulse"
-              >
-                <div className="h-20 sm:h-24 bg-gray-200"></div>
-                <div className="p-2 space-y-2">
-                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              </div>
-            ))
-          ) : products.length === 0 ? (
+          {products.length === 0 ? (
             <div className="col-span-full text-center py-8">
               <p className="text-gray-600 text-sm">
                 No products available.

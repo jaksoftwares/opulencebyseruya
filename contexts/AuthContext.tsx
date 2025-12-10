@@ -229,31 +229,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session using Supabase's built-in persistence
     const getInitialSession = async () => {
       try {
         setLoading(true);
 
-        // Check localStorage for persisted auth state
-        const persistedAuth = localStorage.getItem('opulence_auth');
-        let persistedData = null;
-
-        if (persistedAuth) {
-          try {
-            persistedData = JSON.parse(persistedAuth);
-            // Check if persisted data is still valid (not expired - 7 days)
-            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-            if (persistedData.expiresAt && persistedData.expiresAt < Date.now()) {
-              localStorage.removeItem('opulence_auth');
-              persistedData = null;
-            }
-          } catch (error) {
-            console.error('Error parsing persisted auth:', error);
-            localStorage.removeItem('opulence_auth');
-          }
-        }
-
-        // Get current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
@@ -264,68 +244,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Check if session exists
         if (session?.user) {
-          // Set user first
           setUser(session.user);
 
-          // Fetch customer data
+          // Fetch customer data for the current user
           const customerData = await fetchCustomer(session.user.id, session.user.email, session.user.user_metadata);
 
-          // Only set customer if data was successfully fetched
           if (customerData) {
             setCustomer(customerData);
-            // Persist auth state for 7 days
-            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-            localStorage.setItem('opulence_auth', JSON.stringify({
-              user: session.user,
-              customer: customerData,
-              expiresAt: Date.now() + sevenDaysMs,
-            }));
           } else {
             console.log('Failed to fetch customer data, signing out');
             await supabase.auth.signOut();
-            setUser(null);
-            setCustomer(null);
-          }
-        } else if (persistedData) {
-          // Use persisted data if no active session but we have persisted data
-          console.log('Using persisted auth data, validating session...');
-
-          // Try to refresh the session to ensure it's still valid
-          const refreshed = await refreshSession();
-          if (refreshed) {
-            console.log('Session refreshed successfully with persisted data');
-            // Get the refreshed session data
-            const { data: { session: newSession } } = await supabase.auth.getSession();
-            if (newSession?.user) {
-              setUser(newSession.user);
-              // Re-fetch customer data to ensure it's current
-              const customerData = await fetchCustomer(newSession.user.id, newSession.user.email, newSession.user.user_metadata);
-              if (customerData) {
-                setCustomer(customerData);
-                // Update persisted data with fresh session
-                const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-                localStorage.setItem('opulence_auth', JSON.stringify({
-                  user: newSession.user,
-                  customer: customerData,
-                  expiresAt: Date.now() + sevenDaysMs,
-                }));
-              } else {
-                console.log('Failed to fetch customer data after refresh, clearing persisted data');
-                localStorage.removeItem('opulence_auth');
-                setUser(null);
-                setCustomer(null);
-              }
-            } else {
-              console.log('No valid session after refresh, clearing persisted data');
-              localStorage.removeItem('opulence_auth');
-              setUser(null);
-              setCustomer(null);
-            }
-          } else {
-            console.log('Session refresh failed, clearing persisted data');
-            localStorage.removeItem('opulence_auth');
             setUser(null);
             setCustomer(null);
           }
@@ -354,7 +283,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log('User signed out or no session');
             setUser(null);
             setCustomer(null);
-            localStorage.removeItem('opulence_auth');
             setLoading(false);
             return;
           }
@@ -380,7 +308,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   await supabase.auth.signOut();
                   setUser(null);
                   setCustomer(null);
-                  localStorage.removeItem('opulence_auth');
                   setLoading(false);
                   return;
                 }
@@ -389,7 +316,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 await supabase.auth.signOut();
                 setUser(null);
                 setCustomer(null);
-                localStorage.removeItem('opulence_auth');
                 setLoading(false);
                 return;
               }
@@ -400,20 +326,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (customerData) {
               setCustomer(customerData);
-              // Persist auth state for 7 days
-              const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-              localStorage.setItem('opulence_auth', JSON.stringify({
-                user: currentSession.user,
-                customer: customerData,
-                expiresAt: Date.now() + sevenDaysMs,
-              }));
               console.log('Customer data loaded successfully');
             } else {
               console.log('Failed to fetch customer data after auth change, signing out');
               await supabase.auth.signOut();
               setUser(null);
               setCustomer(null);
-              localStorage.removeItem('opulence_auth');
             }
           }
         } catch (error) {
@@ -644,7 +562,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Force clear local state immediately
       setUser(null);
       setCustomer(null);
-      localStorage.removeItem('opulence_auth');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('opulence_auth');
+      }
 
       toast({
         title: 'Signed out',

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -13,11 +13,12 @@ import {
   Star, ChevronLeft, ChevronRight, Check, Package,
   RefreshCw, Clock, MapPin, Minus, Plus, Home
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProductCard from '@/components/ProductCard';
+import { supabase } from '@/lib/supabase';
+import { useParams } from 'next/navigation';
 
 interface Product {
   id: string;
@@ -40,33 +41,54 @@ interface Category {
 }
 
 interface ProductDetailClientProps {
-  slug: string;
+  product: Product | null;
+  category: Category | null;
+  relatedProducts: Product[];
 }
 
-export default function ProductDetailClient({ slug }: ProductDetailClientProps) {
-  const [product, setProduct] = useState<Product | null>(null);
-  const [category, setCategory] = useState<Category | null>(null);
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
-  const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [isImageZoomed, setIsImageZoomed] = useState(false);
+export default function ProductDetailClient({
+  product,
+  category,
+  relatedProducts,
+}: ProductDetailClientProps) {
+  const params = useParams<{ slug: string }>();
 
-  const { addToCart } = useCart();
-  const { toast } = useToast();
+  const [productState, setProductState] = useState<Product | null>(product);
+  const [categoryState, setCategoryState] = useState<Category | null>(category);
+  const [relatedProductsState, setRelatedProductsState] = useState<Product[]>(relatedProducts);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      const { data: productData } = await supabase
-        .from('products')
-        .select('*')
-        .eq('slug', slug)
-        .eq('is_active', true)
-        .maybeSingle();
+    if (productState || !params?.slug) return;
 
-      if (productData) {
-        setProduct(productData);
+    const fetchProduct = async () => {
+      setLoading(true);
+      try {
+        const { data: productData } = await supabase
+          .from('products')
+          .select('*')
+          .eq('slug', params.slug as string)
+          .maybeSingle();
+
+        if (!productData) {
+          setProductState(null);
+          return;
+        }
+
+        setProductState({
+          id: productData.id,
+          name: productData.name,
+          slug: productData.slug,
+          description: productData.description,
+          price: productData.price,
+          compare_at_price: productData.compare_at_price,
+          images: productData.images || [],
+          stock_quantity: productData.stock_quantity,
+          sku: productData.sku,
+          specifications: productData.specifications,
+          is_featured: productData.is_featured,
+          category_id: productData.category_id,
+        });
 
         if (productData.category_id) {
           const { data: categoryData } = await supabase
@@ -75,9 +97,13 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
             .eq('id', productData.category_id)
             .maybeSingle();
 
-          if (categoryData) setCategory(categoryData);
+          if (categoryData) {
+            setCategoryState({
+              name: categoryData.name,
+              slug: categoryData.slug,
+            });
+          }
 
-          // Fetch related products from the same category
           const { data: relatedData } = await supabase
             .from('products')
             .select('*')
@@ -86,42 +112,65 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
             .eq('is_active', true)
             .limit(4);
 
-          if (relatedData) setRelatedProducts(relatedData);
+          setRelatedProductsState(
+            (relatedData || []).map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              slug: p.slug,
+              description: p.description,
+              price: p.price,
+              compare_at_price: p.compare_at_price,
+              images: p.images || [],
+              stock_quantity: p.stock_quantity,
+              sku: p.sku,
+              specifications: p.specifications,
+              is_featured: p.is_featured,
+              category_id: p.category_id,
+            }))
+          );
         }
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     fetchProduct();
-  }, [slug]);
+  }, [productState, params?.slug]);
+
+  const [quantity, setQuantity] = useState(1);
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isImageZoomed, setIsImageZoomed] = useState(false);
+
+  const { addToCart } = useCart();
+  const { toast } = useToast();
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!productState) return;
 
     for (let i = 0; i < quantity; i++) {
       addToCart({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.images[0] || '',
-        sku: product.sku,
+        id: productState.id,
+        name: productState.name,
+        price: productState.price,
+        image: productState.images[0] || '',
+        sku: productState.sku,
       });
     }
 
     toast({
       title: 'Added to cart',
-      description: `${quantity} x ${product.name} added to your cart.`,
+      description: `${quantity} x ${productState.name} added to your cart.`,
     });
 
     setQuantity(1);
   };
 
   const handleWhatsAppOrder = () => {
-    if (!product) return;
+    if (!productState) return;
 
-    const productUrl = `${window.location.origin}/products/${product.slug}`;
-    const message = `Hi, I'm interested in ordering:\n\n*${product.name}*\nPrice: KES ${product.price.toLocaleString()}\nQuantity: ${quantity}\nSKU: ${product.sku}\nProduct Link: ${productUrl}\n\nPlease provide more details about delivery and payment.`;
+    const productUrl = `${window.location.origin}/products/${productState.slug}`;
+    const message = `Hi, I'm interested in ordering:\n\n*${productState.name}*\nPrice: KES ${productState.price.toLocaleString()}\nQuantity: ${quantity}\nSKU: ${productState.sku}\nProduct Link: ${productUrl}\n\nPlease provide more details about delivery and payment.`;
     const whatsappUrl = `https://wa.me/254742617839?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -130,8 +179,8 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: product?.name,
-          text: `Check out ${product?.name} on Opulence by Seruya`,
+          title: productState?.name,
+          text: `Check out ${productState?.name} on Opulence by Seruya`,
           url: window.location.href,
         });
       } catch (error) {
@@ -151,33 +200,30 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
     toast({
       title: isWishlisted ? 'Removed from wishlist' : 'Added to wishlist',
       description: isWishlisted
-        ? `${product?.name} removed from your wishlist.`
-        : `${product?.name} added to your wishlist.`,
+        ? `${productState?.name} removed from your wishlist.`
+        : `${productState?.name} added to your wishlist.`,
     });
   };
 
   const nextImage = () => {
-    if (product && product.images.length > 0) {
-      setSelectedImage((prev) => (prev + 1) % product.images.length);
+    if (productState && productState.images.length > 0) {
+      setSelectedImage((prev) => (prev + 1) % productState.images.length);
     }
   };
 
   const prevImage = () => {
-    if (product && product.images.length > 0) {
-      setSelectedImage((prev) => (prev - 1 + product.images.length) % product.images.length);
+    if (productState && productState.images.length > 0) {
+      setSelectedImage((prev) => (prev - 1 + productState.images.length) % productState.images.length);
     }
   };
 
-  if (loading) {
+  if (loading && !productState) {
     return (
       <div className="flex flex-col min-h-screen">
         <Header />
         <main className="flex-1 container mx-auto px-4 py-12">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-500 border-t-transparent mb-4"></div>
-              <p className="text-gray-600">Loading product...</p>
-            </div>
+          <div className="text-center py-20">
+            <p className="text-gray-600 mb-4">Loading product...</p>
           </div>
         </main>
         <Footer />
@@ -185,7 +231,7 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
     );
   }
 
-  if (!product) {
+  if (!productState) {
     return (
       <div className="flex flex-col min-h-screen">
         <Header />
@@ -207,11 +253,11 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
     );
   }
 
-  const discount = product.compare_at_price
-    ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
+  const discount = productState.compare_at_price
+    ? Math.round(((productState.compare_at_price - productState.price) / productState.compare_at_price) * 100)
     : 0;
 
-  const hasMultipleImages = product.images && product.images.length > 1;
+  const hasMultipleImages = productState.images && productState.images.length > 1;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -224,16 +270,16 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
               <Link href="/" className="hover:text-amber-600 transition-colors">Home</Link>
               <ChevronRight className="h-4 w-4" />
               <Link href="/shop" className="hover:text-amber-600 transition-colors">Shop</Link>
-              {category && (
+              {categoryState && (
                 <>
                   <ChevronRight className="h-4 w-4" />
-                  <Link href={`/categories/${category.slug}`} className="hover:text-amber-600 transition-colors">
-                    {category.name}
+                  <Link href={`/categories/${categoryState.slug}`} className="hover:text-amber-600 transition-colors">
+                    {categoryState.name}
                   </Link>
                 </>
               )}
               <ChevronRight className="h-4 w-4" />
-              <span className="text-gray-900 font-medium truncate max-w-[200px]">{product.name}</span>
+              <span className="text-gray-900 font-medium truncate max-w-[200px]">{productState.name}</span>
             </nav>
           </div>
         </div>
@@ -245,11 +291,11 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
               {/* Main Image */}
               <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg group">
                 <div className="aspect-square relative">
-                  {product.images[selectedImage] ? (
+                  {productState.images[selectedImage] ? (
                     <>
                       <Image
-                        src={product.images[selectedImage]}
-                        alt={`${product.name} - Image ${selectedImage + 1}`}
+                        src={productState.images[selectedImage]}
+                        alt={`${productState.name} - Image ${selectedImage + 1}`}
                         fill
                         className={`object-cover transition-transform duration-300 ${
                           isImageZoomed ? 'scale-150 cursor-zoom-out' : 'cursor-zoom-in'
@@ -281,7 +327,7 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
                       {/* Image Counter */}
                       {hasMultipleImages && (
                         <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
-                          {selectedImage + 1} / {product.images.length}
+                          {selectedImage + 1} / {productState.images.length}
                         </div>
                       )}
                     </>
@@ -294,7 +340,7 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
 
                 {/* Badges Overlay */}
                 <div className="absolute top-4 left-4 flex flex-col gap-2">
-                  {product.is_featured && (
+                  {productState.is_featured && (
                     <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg">
                       ⭐ Featured
                     </Badge>
@@ -310,7 +356,7 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
               {/* Thumbnail Gallery */}
               {hasMultipleImages && (
                 <div className="grid grid-cols-5 gap-3">
-                  {product.images.map((image, index) => (
+                  {productState.images.map((image, index) => (
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
@@ -345,13 +391,13 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
                     {category.name}
                   </Link>
                 )}
-                <span className="text-sm text-gray-500">SKU: {product.sku}</span>
+                <span className="text-sm text-gray-500">SKU: {productState.sku}</span>
               </div>
 
               {/* Title */}
               <div>
                 <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 leading-tight">
-                  {product.name}
+                  {productState.name}
                 </h1>
 
                 {/* Rating & Reviews */}
@@ -371,10 +417,10 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
 
                 {/* Status Badges */}
                 <div className="flex items-center gap-3 flex-wrap">
-                  {product.stock_quantity > 0 ? (
+                  {productState.stock_quantity > 0 ? (
                     <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                       <Check className="h-3 w-3 mr-1" />
-                      In Stock ({product.stock_quantity} available)
+                      In Stock ({productState.stock_quantity} available)
                     </Badge>
                   ) : (
                     <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
@@ -388,15 +434,15 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200">
                 <div className="flex items-baseline gap-4">
                   <span className="text-4xl md:text-5xl font-bold text-gray-900">
-                    KES {product.price.toLocaleString()}
+                    KES {productState.price.toLocaleString()}
                   </span>
-                  {product.compare_at_price && (
+                  {productState.compare_at_price && (
                     <div className="flex flex-col">
                       <span className="text-xl text-gray-500 line-through">
-                        KES {product.compare_at_price.toLocaleString()}
+                        KES {productState.compare_at_price.toLocaleString()}
                       </span>
                       <span className="text-sm text-green-600 font-semibold">
-                        You save KES {(product.compare_at_price - product.price).toLocaleString()}
+                        You save KES {(productState.compare_at_price - productState.price).toLocaleString()}
                       </span>
                     </div>
                   )}
@@ -425,8 +471,8 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setQuantity(Math.min(product.stock_quantity, quantity + 1))}
-                      disabled={quantity >= product.stock_quantity}
+                      onClick={() => setQuantity(Math.min(productState.stock_quantity, quantity + 1))}
+                      disabled={quantity >= productState.stock_quantity}
                       className="h-12 w-12 hover:bg-gray-100"
                     >
                       <Plus className="h-4 w-4" />
@@ -440,7 +486,7 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
                     size="lg"
                     className="bg-amber-500 hover:bg-amber-600 text-white h-14 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
                     onClick={handleAddToCart}
-                    disabled={product.stock_quantity === 0}
+                    disabled={productState.stock_quantity === 0}
                   >
                     <ShoppingCart className="mr-2 h-5 w-5" />
                     Add to Cart
@@ -546,15 +592,15 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
               <TabsContent value="description" className="p-8">
                 <div className="prose max-w-none">
                   <div className="text-gray-700 whitespace-pre-line leading-relaxed text-lg">
-                    {product.description}
+                    {productState.description}
                   </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="specifications" className="p-8">
-                {product.specifications && Object.keys(product.specifications).length > 0 ? (
+                {productState.specifications && Object.keys(productState.specifications).length > 0 ? (
                   <div className="grid md:grid-cols-2 gap-6">
-                    {Object.entries(product.specifications).map(([key, value]) => (
+                    {Object.entries(productState.specifications).map(([key, value]) => (
                       <div key={key} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
                         <Check className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                         <div>
@@ -635,14 +681,14 @@ export default function ProductDetailClient({ slug }: ProductDetailClientProps) 
           </div>
 
           {/* Related Products Section */}
-          {relatedProducts.length > 0 && (
+          {relatedProductsState.length > 0 && (
             <div className="mt-16">
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-gray-900 mb-4">Related Products</h2>
                 <p className="text-gray-600">You might also like these products from the same category</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {relatedProducts.map((relatedProduct) => (
+                {relatedProductsState.map((relatedProduct) => (
                   <ProductCard
                     key={relatedProduct.id}
                     id={relatedProduct.id}

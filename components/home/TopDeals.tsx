@@ -1,12 +1,11 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import { Flame, Clock, TrendingUp, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 
-interface Deal {
+export interface TopDeal {
   id: string;
   name: string;
   slug: string;
@@ -19,70 +18,13 @@ interface Deal {
   stockLeft: number;
 }
 
-export default function TopDeals() {
-  const [deals, setDeals] = useState<Deal[]>([]);
+interface TopDealsProps {
+  deals: TopDeal[];
+}
+
+export default function TopDeals({ deals }: TopDealsProps) {
   const [timeRemaining, setTimeRemaining] = useState('23:45:12');
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    const fetchTopDeals = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(30);
-
-        if (error) {
-          console.error('Error fetching top deals:', error);
-          return;
-        }
-
-        if (data) {
-          const formattedDeals: Deal[] = data.map((product: any) => {
-            // Generate random sold count and progress for demonstration
-            const randomSoldCount = Math.floor(Math.random() * 500) + 50;
-            const randomStockLeft = Math.floor(Math.random() * 50) + 5;
-            
-            return {
-              id: product.id,
-              name: product.name,
-              slug: product.slug,
-              price: product.price,
-              originalPrice:
-                product.original_price ||
-                product.compare_at_price ||
-                product.price,
-              discount:
-                product.discount ||
-                (product.original_price
-                  ? Math.round(
-                      ((product.original_price - product.price) /
-                        product.original_price) *
-                        100
-                    )
-                  : 0),
-              image:
-                product.images && product.images.length > 0
-                  ? product.images[0]
-                  : 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=800',
-              timeLeft: '23:45:12',
-              soldCount: randomSoldCount,
-              stockLeft: randomStockLeft,
-            };
-          });
-          setDeals(formattedDeals);
-        }
-      } catch (error) {
-        console.error('Error fetching top deals:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTopDeals();
-
     // Countdown timer
     const timer = setInterval(() => {
       const now = new Date();
@@ -137,21 +79,7 @@ export default function TopDeals() {
 
         {/* Deals Grid */}
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 sm:gap-3 mb-6">
-          {loading ? (
-            Array.from({ length: 30 }).map((_, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-xl overflow-hidden shadow-md animate-pulse"
-              >
-                <div className="h-20 sm:h-24 bg-gray-200"></div>
-                <div className="p-2 space-y-2">
-                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-2 bg-gray-200 rounded"></div>
-                </div>
-              </div>
-            ))
-          ) : deals.length === 0 ? (
+          {deals.length === 0 ? (
             <div className="col-span-full text-center py-8">
               <p className="text-gray-600 text-sm">
                 No deals available at the moment.

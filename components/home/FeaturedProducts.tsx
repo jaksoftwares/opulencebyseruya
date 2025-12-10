@@ -1,12 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
 import { Star, TrendingUp, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabase';
 
-interface Product {
+export interface FeaturedProduct {
   id: string;
   name: string;
   slug: string;
@@ -18,52 +16,11 @@ interface Product {
   badge?: 'new' | 'bestseller' | 'trending';
 }
 
-export default function FeaturedProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+interface FeaturedProductsProps {
+  products: FeaturedProduct[];
+}
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-
-        const { data: productsData } = await supabase
-          .from('products')
-          .select('*')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(30);
-
-        if (productsData) {
-          const formatted: Product[] = productsData.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          slug: p.slug,
-          price: p.price,
-          compareAtPrice: p.original_price || p.compare_at_price,
-          image:
-            p.images?.[0] ||
-            'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=800',
-          rating: 4.5 + Math.random() * 0.5,
-          reviews: Math.floor(Math.random() * 200) + 50,
-          badge: (Math.random() > 0.7
-            ? Math.random() > 0.5
-              ? 'bestseller'
-              : 'trending'
-            : undefined) as 'new' | 'bestseller' | 'trending' | undefined,
-
-        }));
-
-          setProducts(formatted);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-
-
+export default function FeaturedProducts({ products }: FeaturedProductsProps) {
   const getBadgeConfig = (badge?: string) => {
     switch (badge) {
       case 'new':
@@ -96,21 +53,7 @@ export default function FeaturedProducts() {
 
         {/* Products Grid */}
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 sm:gap-3 mb-6">
-          {loading ? (
-            Array.from({ length: 30 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-xl overflow-hidden shadow-md animate-pulse"
-              >
-                <div className="h-20 sm:h-24 bg-gray-200" />
-                <div className="p-2 space-y-2">
-                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              </div>
-            ))
-          ) : products.length === 0 ? (
+          {products.length === 0 ? (
             <div className="col-span-full text-center py-8">
               <p className="text-gray-600 text-sm">
                 No products available.

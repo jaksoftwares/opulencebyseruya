@@ -5,9 +5,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { LayoutDashboard, Package, ShoppingCart, Users, FileText, TrendingUp, Settings, LogOut, Menu, X, Truck, Mail, CreditCard } from 'lucide-react';
-import { signOutAdmin } from '@/lib/admin-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -28,10 +28,11 @@ export default function AdminNav() {
   const router = useRouter();
   const { toast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { signOut } = useAuth();
 
   const handleLogout = async () => {
     try {
-      await signOutAdmin();
+      await signOut();
       toast({
         title: 'Logged out',
         description: 'See you next time!',

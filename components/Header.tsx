@@ -17,13 +17,14 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import GlobalSearch from '@/components/GlobalSearch';
 import { useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function Header() {
   const { cartCount } = useCart();
   const { customer, isAdmin, signOut, loading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   const navLinks = [
     { href: '/', label: 'Home' },
@@ -133,10 +134,13 @@ export default function Header() {
                     </>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => {
-                    console.log('Sign out clicked');
-                    signOut();
-                  }}>
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      console.log('Sign out clicked');
+                      await signOut();
+                      router.push('/login');
+                    }}
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign out
                   </DropdownMenuItem>
@@ -227,10 +231,11 @@ export default function Header() {
                           </Link>
                         )}
                         <Button
-                          onClick={() => {
+                          onClick={async () => {
                             console.log('Mobile sign out clicked');
-                            signOut();
+                            await signOut();
                             setIsOpen(false);
+                            router.push('/login');
                           }}
                           variant="outline"
                           className="w-full mt-4"

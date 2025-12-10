@@ -1,13 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
   ChefHat, Plane, Baby, Bath, Home, Bed, Heart, Package,
   Sparkles, UtensilsCrossed, Luggage, Gift
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 const categoryIcons: { [key: string]: any } = {
   'kitchen-ware': ChefHat,
@@ -36,7 +35,7 @@ const categoryColors = [
   'from-yellow-500 to-amber-600',
 ];
 
-interface Category {
+export interface HomeCategory {
   id: string;
   name: string;
   slug: string;
@@ -44,31 +43,12 @@ interface Category {
   image_url?: string;
 }
 
-export default function FeaturedCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
+interface FeaturedCategoriesProps {
+  categories: HomeCategory[];
+}
+
+export default function FeaturedCategories({ categories }: FeaturedCategoriesProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
-          .eq('is_active', true)
-          .order('display_order')
-          .limit(8);
-
-        if (error) throw error;
-        setCategories(data || []);
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCategories();
-  }, []);
 
   return (
     <section className="py-16 sm:py-20 bg-gradient-to-b from-white to-amber-50/30 relative overflow-hidden">
@@ -95,18 +75,10 @@ export default function FeaturedCategories() {
 
         {/* Categories Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
-          {loading ? (
-            // Loading Skeletons
-            Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl p-4 sm:p-6 shadow-md animate-pulse"
-              >
-                <div className="w-16 sm:w-20 h-16 sm:h-20 mx-auto mb-3 sm:mb-4 bg-gray-200 rounded-2xl"></div>
-                <div className="h-3 sm:h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
-                <div className="h-2.5 sm:h-3 bg-gray-200 rounded w-full mx-auto"></div>
-              </div>
-            ))
+          {categories.length === 0 ? (
+            <div className="col-span-full text-center py-8">
+              <p className="text-gray-600 text-sm">No categories available.</p>
+            </div>
           ) : (
             categories.map((category, index) => {
               const Icon = categoryIcons[category.slug] || Package;

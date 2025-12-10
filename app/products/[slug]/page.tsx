@@ -1,6 +1,6 @@
-import { Metadata } from 'next';
-import ProductDetailClient from './ProductDetailClient';
-import { supabase } from '@/lib/supabase';
+import { Metadata } from "next";
+import ProductDetailClient from "./ProductDetailClient";
+import { supabase } from "@/lib/supabase";
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const { data: product } = await supabase
@@ -56,6 +56,64 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default function ProductDetailPage({ params }: { params: { slug: string } }) {
-  return <ProductDetailClient slug={params.slug} />;
+async function getProductData(slug: string) {
+  // First try active products only
+  let { data: product } = await supabase
+    .from("products")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  // Fallback: if not found, try without is_active filter to handle legacy data
+  if (!product) {
+    const fallback = await supabase
+      .from("products")
+      .select("*")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    product = fallback.data ?? null;
+  }
+
+  if (!product) {
+    return { product: null, category: null, relatedProducts: [] };
+  }
+
+  let category = null;
+  if (product.category_id) {
+    const { data: categoryData } = await supabase
+      .from("categories")
+      .select("name, slug")
+      .eq("id", product.category_id)
+      .maybeSingle();
+
+    if (categoryData) {
+      category = categoryData;
+    }
+  }
+
+  const { data: relatedProductsData } = await supabase
+    .from("products")
+    .select("*")
+    .eq("category_id", product.category_id)
+    .neq("id", product.id)
+    .eq("is_active", true)
+    .limit(4);
+
+  const relatedProducts = relatedProductsData ?? [];
+
+  return { product, category, relatedProducts };
+}
+
+export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
+  const { product, category, relatedProducts } = await getProductData(params.slug);
+
+  return (
+    <ProductDetailClient
+      product={product}
+      category={category}
+      relatedProducts={relatedProducts}
+    />
+  );
 }

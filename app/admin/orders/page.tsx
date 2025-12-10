@@ -69,7 +69,7 @@ export default function AdminOrdersPage() {
   const router = useRouter();
   const { isAdmin, customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -211,15 +211,24 @@ export default function AdminOrdersPage() {
     }
   };
 
-  if (authLoading) {
+  // While auth status or orders are loading, show a unified loading state
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AdminNav />
         <div className="container mx-auto px-4 py-8">
-          <p className="text-center text-gray-600">Loading...</p>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading orders...</p>
+          </div>
         </div>
       </div>
     );
+  }
+
+  // If the user isn’t an admin after auth has resolved, don’t render the admin UI
+  if (!isAdmin) {
+    return null; // useEffect will redirect to /login
   }
 
   return (
