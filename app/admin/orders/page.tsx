@@ -75,6 +75,7 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [cashProcessing, setCashProcessing] = useState(false);
 
   useEffect(() => {
     if (!authLoading && customer) {
@@ -172,6 +173,48 @@ export default function AdminOrdersPage() {
         description: error.message || 'Failed to update order status',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleConfirmCashPayment = async (orderId: string) => {
+    try {
+      setCashProcessing(true);
+      const response = await fetch('/api/admin/payments/cash', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to mark cash payment');
+      }
+
+      toast({ title: 'Payment recorded', description: 'Marked as paid in cash' });
+      // Refresh orders list and update dialog state
+      fetchOrders();
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder({
+          ...selectedOrder,
+          payment_status: 'completed',
+          payment_method: 'cash',
+          payment: data.payment || {
+            id: data.payment?.id || 'cash-' + Date.now(),
+            order_id: orderId,
+            amount: selectedOrder.total,
+            phone_number: selectedOrder.customer_phone,
+            status: 'completed',
+            payment_method: 'cash',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+        });
+      }
+    } catch (error: any) {
+      console.error('Error confirming cash payment:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to record cash payment', variant: 'destructive' });
+    } finally {
+      setCashProcessing(false);
     }
   };
 
@@ -429,10 +472,33 @@ export default function AdminOrdersPage() {
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-sm text-gray-600 mb-1">Payment Method</h3>
-                    <p className="text-gray-900 capitalize">{selectedOrder.payment_method.replace('_', ' ')}</p>
-                    <Badge variant={selectedOrder.payment_status === 'completed' ? 'default' : 'secondary'} className="mt-1">
-                      {selectedOrder.payment_status}
-                    </Badge>
+                    <div className="flex items-center gap-3">
+                      <p className="text-gray-900 capitalize">{selectedOrder.payment_method.replace('_', ' ')}</p>
+                      <Badge variant={selectedOrder.payment_status === 'completed' ? 'default' : 'secondary'} className="mt-1">
+                        {selectedOrder.payment_status}
+                      </Badge>
+                    </div>
+
+                    <div className="mt-3">
+                      <Select
+                        value=""
+                        onValueChange={(value) => {
+                          if (value === 'confirm_cash') {
+                            if (!cashProcessing) handleConfirmCashPayment(selectedOrder.id);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Admin Actions" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="confirm_cash">Payment confirmed in cash</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {cashProcessing && (
+                        <p className="text-xs text-gray-500 mt-2">Processing cash confirmation...</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
