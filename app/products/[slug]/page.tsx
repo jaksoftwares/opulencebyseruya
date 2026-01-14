@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 
   const productImage = product.images && product.images.length > 0 ? product.images[0] : '/opulence.jpg';
-  const productUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://opulencebyseruya.com'}/products/${product.slug}`;
+  const productUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://opulencebyseruya.co.ke'}/products/${product.slug}`;
 
   return {
     title: `${product.name} | Opulence by Seruya`,

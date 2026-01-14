@@ -46,7 +46,7 @@ export default function ContactPage() {
               Contact Us
             </h1>
             <p className="text-gray-600 text-lg">
-              Get in touch with us. We're here to help!
+              Get in touch with us. We&apos;re here to help!
             </p>
           </div>
         </div>
@@ -137,8 +137,8 @@ export default function ContactPage() {
                     <Mail className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="font-medium text-gray-900">Email</p>
-                      <a href="mailto:info@opulencebyseruya.com" className="text-gray-600 hover:text-amber-600">
-                        info@opulencebyseruya.com
+                      <a href="mailto:info@opulencebyseruya.co.ke" className="text-gray-600 hover:text-amber-600">
+                        info@opulencebyseruya.co.ke
                       </a>
                     </div>
                   </div>
