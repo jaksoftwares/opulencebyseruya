@@ -3,7 +3,7 @@
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Hero from '@/components/home/Hero';
-import ChristmasDeals, { ChristmasDealProduct } from '@/components/home/ChristmasDeals';
+// import ChristmasDeals, { ChristmasDealProduct } from '@/components/home/ChristmasDeals';
 import FeaturedCategories, { HomeCategory } from '@/components/home/FeaturedCategories';
 import FeaturedProducts, { FeaturedProduct } from '@/components/home/FeaturedProducts';
 import TopDeals, { TopDeal } from '@/components/home/TopDeals';
@@ -98,20 +98,20 @@ export default async function Home() {
     badge: 'new',
   }));
 
-  const christmasDeals: ChristmasDealProduct[] = productsData.slice(0, 18).map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    price: p.price,
-    compareAtPrice: p.original_price || p.compare_at_price,
-    image:
-      p.images?.[0] ||
-      'https://images.unsplash.com/photo-1512389142860-9c449e58a543?q=80&w=800',
-    rating: 4.3 + Math.random() * 0.7,
-    reviews: Math.floor(Math.random() * 150) + 30,
-    isChristmasDeal: true,
-    categoryId: p.category_id,
-  }));
+  // const christmasDeals: ChristmasDealProduct[] = productsData.slice(0, 18).map((p: any) => ({
+  //   id: p.id,
+  //   name: p.name,
+  //   slug: p.slug,
+  //   price: p.price,
+  //   compareAtPrice: p.original_price || p.compare_at_price,
+  //   image:
+  //     p.images?.[0] ||
+  //     'https://images.unsplash.com/photo-1512389142860-9c449e58a543?q=80&w=800',
+  //   rating: 4.3 + Math.random() * 0.7,
+  //   reviews: Math.floor(Math.random() * 150) + 30,
+  //   isChristmasDeal: true,
+  //   categoryId: p.category_id,
+  // }));
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -121,7 +121,7 @@ export default async function Home() {
         <Hero />
         
         {/* Christmas Deals Section - Interactive and product-oriented section for Christmas deals */}
-        <ChristmasDeals products={christmasDeals} />
+        {/* <ChristmasDeals products={christmasDeals} /> */}
         
         {/* Featured Categories - Enhanced with vibrant gradients and hover effects */}
         <FeaturedCategories categories={homeCategories} />
