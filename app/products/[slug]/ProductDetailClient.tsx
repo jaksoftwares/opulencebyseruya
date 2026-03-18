@@ -381,8 +381,8 @@ export default function ProductDetailClient({
 
             {/* Product Info */}
             <div className="space-y-6">
-              {/* Category & SKU */}
-              <div className="flex items-center justify-between">
+              {/* Category */}
+              <div className="flex items-center">
                 {category && (
                   <Link
                     href={`/categories/${category.slug}`}
@@ -391,7 +391,6 @@ export default function ProductDetailClient({
                     {category.name}
                   </Link>
                 )}
-                <span className="text-sm text-gray-500">SKU: {productState.sku}</span>
               </div>
 
               {/* Title */}

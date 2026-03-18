@@ -427,7 +427,6 @@ export default function OrderDetailsPage() {
                     <div key={index} className="flex justify-between items-center p-4 border rounded-lg">
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900">{item.product_name}</h4>
-                        <p className="text-sm text-gray-600">SKU: {item.product_sku}</p>
                         <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                       </div>
                       <div className="text-right">
