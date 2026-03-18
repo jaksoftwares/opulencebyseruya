@@ -204,7 +204,7 @@ function generateOrderEmailHTML(order: OrderEmailData): string {
 
         <div style="margin-top: 30px; text-align: center; color: #6b7280; font-size: 14px;">
           <p>This order was placed through the Opulence by Seruya online store.</p>
-          <p>Need help? Contact us at <a href="mailto:opulencebyseruya@gmail.com" style="color: #3b82f6;">opulencebyseruya@gmail.com</a></p>
+          <p>Need help? Contact us at <a href="mailto:info@opulencebyseruya.co.ke" style="color: #3b82f6;">info@opulencebyseruya.co.ke</a></p>
         </div>
       </div>
     </body>
@@ -336,11 +336,11 @@ function generateCustomerOrderEmailHTML(order: OrderEmailData): string {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <div>
               <strong style="color: #374151;">Phone:</strong><br>
-              <a href="tel:+254700000000" style="color: #3b82f6;">+254 700 000 000</a>
+              <a href="tel:+254742617839" style="color: #3b82f6;">+254 742 617 839</a>
             </div>
             <div>
               <strong style="color: #374151;">Email:</strong><br>
-              <a href="mailto:opulencebyseruya@gmail.com" style="color: #3b82f6;">opulencebyseruya@gmail.com</a>
+              <a href="mailto:info@opulencebyseruya.co.ke" style="color: #3b82f6;">info@opulencebyseruya.co.ke</a>
             </div>
           </div>
         </div>

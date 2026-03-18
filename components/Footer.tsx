@@ -97,8 +97,8 @@ export default function Footer() {
               <li className="flex items-start space-x-2">
                 <Mail className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <a href="mailto:info@opulencebyseruya.com" className="hover:text-amber-500 transition-colors">
-                    info@opulencebyseruya.com
+                  <a href="mailto:info@opulencebyseruya.co.ke" className="hover:text-amber-500 transition-colors">
+                    info@opulencebyseruya.co.ke
                   </a>
                 </div>
               </li>

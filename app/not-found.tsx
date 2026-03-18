@@ -117,8 +117,8 @@ export default function NotFoundPage() {
                     <Mail className="h-5 w-5 text-amber-600" />
                     <div>
                       <div className="font-medium">Email us</div>
-                      <a href="mailto:support@opulencebyseruya.co.ke" className="text-amber-600 hover:underline">
-                        support@opulencebyseruya.co.ke
+                      <a href="mailto:info@opulencebyseruya.co.ke" className="text-amber-600 hover:underline">
+                        info@opulencebyseruya.co.ke
                       </a>
                     </div>
                   </div>
@@ -126,8 +126,8 @@ export default function NotFoundPage() {
                     <Phone className="h-5 w-5 text-amber-600" />
                     <div>
                       <div className="font-medium">Call us</div>
-                      <a href="tel:+254700000000" className="text-amber-600 hover:underline">
-                        +254 700 000 000
+                      <a href="tel:+254742617839" className="text-amber-600 hover:underline">
+                        +254 742 617 839
                       </a>
                     </div>
                   </div>
