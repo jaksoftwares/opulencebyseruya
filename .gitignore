@@ -34,3 +34,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+fix_constrained.js
+check_db.js
+sync_customers.js

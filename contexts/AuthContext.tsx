@@ -120,10 +120,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (customerData) {
-        // Return customer with role information
+        // Return customer with role information. Database takes precedence, falling back to metadata.
+        const effectiveRole = (customerData.role && customerData.role !== 'user') 
+          ? customerData.role 
+          : (adminData ? adminData.role : 'user');
+
         return {
           ...customerData,
-          role: adminData ? adminData.role : 'user',
+          role: effectiveRole,
           is_active: adminData ? adminData.is_active : true,
         };
       }
@@ -389,9 +393,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let { data: newCustomer, error: customerError } = await supabase
           .from('customers')
           .insert({
+            id: data.user.id,
             email: userEmail.toLowerCase().trim(),
             full_name: data.user.user_metadata?.full_name || userEmail.split('@')[0],
             phone: data.user.user_metadata?.phone || '',
+            role: 'user',
           })
           .select()
           .single();
@@ -437,7 +443,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Use the newly created customer data directly
           customerData = {
             ...newCustomer,
-            role: adminData ? adminData.role : 'user',
+            role: (newCustomer.role && newCustomer.role !== 'user') ? newCustomer.role : (adminData ? adminData.role : 'user'),
             is_active: adminData ? adminData.is_active : true,
           };
 
@@ -503,8 +509,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: email.toLowerCase().trim(),
             full_name: fullName,
             phone: phone || '',
-            role: 'user',
-            is_active: true,
+            role: isAdmin ? 'admin' : 'user',
           });
 
         if (customerError) {
